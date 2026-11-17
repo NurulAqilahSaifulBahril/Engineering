@@ -2,10 +2,10 @@
 
 Commercial-department portal for solar C&I projects, packaged as a Windows desktop app.
 
-Eleven modules: Sales Pipeline, Project Management (with customisable stages), Material List,
-Solar Design, Savings Analysis, GITA Calculator, GITA Doc Checklist, Installation Reports,
-KPI Dashboard, Guidelines, Weekly Job Report, and an admin-only IT Admin page. The sidebar has a
-light/dark theme toggle; the choice is remembered per machine.
+Fourteen modules: Proposal Generator, Sales Pipeline, Project Management (with customisable
+stages), Material List, Solar Design, Savings Analysis, GITA Calculator, GITA Doc Checklist,
+Installation Reports, KPI Dashboard, Guidelines, Weekly Job Report, Calendar and AI Assistant,
+plus an admin-only IT Admin page. A top bar has global search and a notification center.
 
 ## Install
 
@@ -23,13 +23,16 @@ interrupt an edit in progress. There is also **File → Check for Updates…**.
 
 ## Signing in
 
-First launch seeds one administrator account:
+Every install has a built-in administrator account, added on launch wherever it is missing
+(including data sets that already have other admins):
 
-| Username | Password   |
-|----------|------------|
-| `admin`  | `admin123` |
+| Username   | Password   |
+|------------|------------|
+| `IT Admin` | `Admin123` |
 
-You are forced to change that password immediately. Add colleagues from **IT Admin → Users**.
+There is no forced password change, and these values are public in this repository, so change
+the password in **IT Admin → Users** on each machine. Once the account exists it is left alone,
+so the changed password sticks. Add colleagues from **IT Admin → Users**.
 Usernames may contain spaces; capitals and extra spaces are ignored when signing in.
 
 > **Scope of the sign-in.** This is an accountability layer, not a security boundary. The whole
