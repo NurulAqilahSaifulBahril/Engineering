@@ -4,6 +4,8 @@ const { app, BrowserWindow, Menu, protocol, net, shell, dialog, ipcMain } = requ
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { autoUpdater } = require('electron-updater');
+const fs = require('node:fs');
+const { parseEnv, searchInvoices } = require('./invoice-lookup');
 
 // The renderer is served over a custom app:// scheme rather than file://.
 // That gives it a real, stable origin, so localStorage (where the whole
@@ -120,6 +122,72 @@ function setupUpdates(){
   if(app.isPackaged) autoUpdater.checkForUpdates().catch(()=>{});
 }
 
+/* ---------------------------------------------------------
+   INVOICE LOOKUP (prod_main + NUrul_DB)
+   The database keys are NOT in the installer. Each PC imports its own
+   connection file once (File → Database Connection), which is copied to
+   the app's data folder. Only this main process reads it; the page asks
+   for search results over IPC and never sees the keys.
+--------------------------------------------------------- */
+const DB_KEYS_REQUIRED = ['PG_PROXY_URL', 'PG_PROXY_DATABASE', 'PG_PROXY_TOKEN'];
+function dbConfigPath(){ return path.join(app.getPath('userData'), 'portal-db.env'); }
+let dbEnvCache = null;
+function dbEnv(){
+  if(dbEnvCache) return dbEnvCache;
+  try { dbEnvCache = parseEnv(fs.readFileSync(dbConfigPath(), 'utf8')); }
+  catch { dbEnvCache = {}; }
+  return dbEnvCache;
+}
+
+function setupInvoiceLookup(){
+  ipcMain.handle('invoices:search', async (_event, q)=>{
+    const r = await searchInvoices(dbEnv(), typeof q === 'string' ? q : '');
+    return { ok: r.status === 200, ...r.body };
+  });
+}
+
+async function importDbConnection(){
+  const pick = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import database connection file',
+    message: 'Choose the .env file with the prod_main (PG_PROXY_*) and NUrul_DB (NURUL_PG_PROXY_*) keys.',
+    properties: ['openFile', 'showHiddenFiles'],
+    filters: [{ name: 'Connection file', extensions: ['env', 'txt'] }, { name: 'All files', extensions: ['*'] }]
+  });
+  if(pick.canceled || !pick.filePaths[0]) return;
+  let text;
+  try { text = fs.readFileSync(pick.filePaths[0], 'utf8'); }
+  catch(err){ dialog.showErrorBox('Could not read file', String(err.message || err)); return; }
+  const env = parseEnv(text);
+  const missing = DB_KEYS_REQUIRED.filter(k => !env[k]);
+  if(missing.length){
+    dialog.showMessageBox(mainWindow, { type: 'warning', title: 'Not a connection file',
+      message: 'This file is missing: ' + missing.join(', '), buttons: ['OK'] });
+    return;
+  }
+  // Keep only the keys the lookup uses.
+  const keep = Object.keys(env).filter(k => /^(NURUL_)?PG_PROXY_(URL|DATABASE|TOKEN)$/.test(k));
+  fs.writeFileSync(dbConfigPath(), keep.map(k => `${k}=${env[k]}`).join('\n') + '\n', { mode: 0o600 });
+  dbEnvCache = null;
+  const test = await searchInvoices(dbEnv(), 'INV-1');
+  dialog.showMessageBox(mainWindow, {
+    type: test.status === 200 ? 'info' : 'warning',
+    title: 'Database connection',
+    message: test.status === 200
+      ? `Connected to ${env.PG_PROXY_DATABASE}${env.NURUL_PG_PROXY_DATABASE ? ' and ' + env.NURUL_PG_PROXY_DATABASE : ''}. Invoice lookup is on for this PC.`
+      : 'Saved, but the test search failed: ' + (test.body.error || 'unknown error'),
+    buttons: ['OK']
+  });
+}
+
+async function removeDbConnection(){
+  const ok = await dialog.showMessageBox(mainWindow, { type: 'question', title: 'Remove database connection',
+    message: 'Remove the database keys from this PC? Invoice lookup will stop until a file is imported again.',
+    buttons: ['Remove', 'Cancel'], defaultId: 1, cancelId: 1 });
+  if(ok.response !== 0) return;
+  try { fs.rmSync(dbConfigPath(), { force: true }); } catch {}
+  dbEnvCache = null;
+}
+
 function buildMenu(){
   const template = [
     {
@@ -138,6 +206,13 @@ function buildMenu(){
             updateCheckIsManual = true;
             autoUpdater.checkForUpdates().catch(()=>{});
           }
+        },
+        {
+          label: 'Database Connection',
+          submenu: [
+            { label: 'Import Connection File…', click: ()=> importDbConnection() },
+            { label: 'Remove Connection from This PC…', click: ()=> removeDbConnection() }
+          ]
         },
         { type: 'separator' },
         { role: 'quit' }
@@ -187,6 +262,7 @@ if(!app.requestSingleInstanceLock()){
     });
 
     buildMenu();
+    setupInvoiceLookup();
     createWindow();
     setupUpdates();
 
