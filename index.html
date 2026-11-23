@@ -1376,6 +1376,11 @@ async function loadSharedState(){
       const res = await window.storage.get(STORAGE_KEY, true);
       storageAvailable = true;
       if(res && res.value){
+        // Keep this PC's own copy once, so joining the shared data never loses what was here.
+        try{
+          const mine = EG_KV.storage.getItem(STORAGE_KEY);
+          if(mine && mine !== res.value && !EG_KV.storage.getItem(STORAGE_KEY + '_before_shared')) EG_KV.storage.setItem(STORAGE_KEY + '_before_shared', mine);
+        }catch(e){}
         state = JSON.parse(res.value);
         migrateState();
         return true;

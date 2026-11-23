@@ -8,6 +8,14 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('portalData', {
   searchInvoices: (q)=> ipcRenderer.invoke('invoices:search', String(q || '').slice(0, 80))
 });
+// Shared storage for the page (same shape as window.storage in Claude artifacts). Only exposed when this
+// PC has NUrul_DB keys; otherwise the portal stays local-only, as before.
+if(ipcRenderer.sendSync('kv:enabled')){
+  contextBridge.exposeInMainWorld('storage', {
+    get: (key)=> ipcRenderer.invoke('kv:get', String(key)),
+    set: (key, value)=> ipcRenderer.invoke('kv:set', String(key), String(value))
+  });
+}
 contextBridge.exposeInMainWorld('portalUpdates', {
   onUpdateReady: (callback)=>{
     ipcRenderer.on('update:ready', (_event, info)=> callback(info));

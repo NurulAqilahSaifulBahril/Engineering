@@ -3,7 +3,8 @@
 // Invoice lookup shared by server.js (localhost) and main.js (desktop app).
 // prod_main: invoice no., customer, phone, email, address, agent, amount, kWp.
 // NUrul_DB: installation date, supervisor, wiring and installer teams.
-// Only SELECTs; the proxy keys never leave the process that calls this.
+// Invoice search only SELECTs; the one write path is the portal_kv table at the bottom.
+// The proxy keys never leave the process that calls this.
 
 // Parses a KEY=value file (.env style).
 function parseEnv(text) {
@@ -149,4 +150,33 @@ async function searchInvoices(env, rawQuery) {
 }
 
 
-module.exports = { parseEnv, searchInvoices };
+// Shared portal data in NUrul_DB: one table of its own (public.portal_kv). Never touches the
+// Installation System's tables. Keys are the portal's storage keys; values are the JSON text.
+let kvReady = false;
+function nurul(env) {
+  const { NURUL_PG_PROXY_URL: url, NURUL_PG_PROXY_DATABASE: db, NURUL_PG_PROXY_TOKEN: token } = env || {};
+  if (!url || !db || !token) throw new Error('NUrul_DB is not set up on this PC.');
+  return [url, db, token];
+}
+async function kvEnsure(env) {
+  if (kvReady) return;
+  await proxyQuery(...nurul(env),
+    'create table if not exists public.portal_kv (key text primary key, value text not null, ' +
+    'updated_at timestamptz not null default now(), updated_by text)', []);
+  kvReady = true;
+}
+async function kvGet(env, key) {
+  await kvEnsure(env);
+  const rows = await proxyQuery(...nurul(env), 'select value from public.portal_kv where key = $1', [String(key).slice(0, 200)]);
+  return rows.length ? rows[0].value : null;
+}
+async function kvSet(env, key, value, who) {
+  await kvEnsure(env);
+  await proxyQuery(...nurul(env),
+    'insert into public.portal_kv (key, value, updated_by) values ($1, $2, $3) ' +
+    'on conflict (key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by',
+    [String(key).slice(0, 200), String(value), String(who || '').slice(0, 100)]);
+  return true;
+}
+
+module.exports = { parseEnv, searchInvoices, kvGet, kvSet };

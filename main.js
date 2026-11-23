@@ -5,7 +5,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs');
-const { parseEnv, searchInvoices } = require('./invoice-lookup');
+const { parseEnv, searchInvoices, kvGet, kvSet } = require('./invoice-lookup');
 
 // The renderer is served over a custom app:// scheme rather than file://.
 // That gives it a real, stable origin, so localStorage (where the whole
@@ -119,6 +119,9 @@ function setupUpdates(){
     return true;
   });
 
+  // The releases repo is private: a read-only token (bundled in the connection file) lets the updater see it.
+  const ghToken = dbEnv().GH_UPDATE_TOKEN;
+  if(ghToken) process.env.GH_TOKEN = ghToken;
   if(app.isPackaged) autoUpdater.checkForUpdates().catch(()=>{});
 }
 
@@ -140,6 +143,16 @@ function dbEnv(){
   }
   dbEnvCache = {};
   return dbEnvCache;
+}
+
+function setupSharedStorage(){
+  // Shared portal data lives in NUrul_DB (public.portal_kv). Only offered when this PC has its keys.
+  ipcMain.on('kv:enabled', e => { const v = dbEnv(); e.returnValue = !!(v.NURUL_PG_PROXY_URL && v.NURUL_PG_PROXY_DATABASE && v.NURUL_PG_PROXY_TOKEN); });
+  ipcMain.handle('kv:get', async (_e, key)=>({ value: await kvGet(dbEnv(), String(key)) }));
+  ipcMain.handle('kv:set', async (_e, key, value)=>{
+    if(typeof value !== 'string' || value.length > 40 * 1024 * 1024) throw new Error('Value too large');
+    return kvSet(dbEnv(), String(key), value, require('node:os').userInfo().username);
+  });
 }
 
 function setupInvoiceLookup(){
@@ -266,6 +279,7 @@ if(!app.requestSingleInstanceLock()){
 
     buildMenu();
     setupInvoiceLookup();
+    setupSharedStorage();
     createWindow();
     setupUpdates();
 
