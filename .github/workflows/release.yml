@@ -1,0 +1,68 @@
+name: Release installer
+
+# Runs when a v* tag is pushed, or by hand from the Actions tab (Run workflow) for an existing tag.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and release (e.g. v1.3.2)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Database keys come from Actions secrets; the bundle step copies them into the installer.
+      - name: Write connection file from secrets
+        shell: bash
+        env:
+          PG_PROXY_URL: ${{ secrets.PG_PROXY_URL }}
+          PG_PROXY_DATABASE: ${{ secrets.PG_PROXY_DATABASE }}
+          PG_PROXY_TOKEN: ${{ secrets.PG_PROXY_TOKEN }}
+          NURUL_PG_PROXY_URL: ${{ secrets.NURUL_PG_PROXY_URL }}
+          NURUL_PG_PROXY_DATABASE: ${{ secrets.NURUL_PG_PROXY_DATABASE }}
+          NURUL_PG_PROXY_TOKEN: ${{ secrets.NURUL_PG_PROXY_TOKEN }}
+          GH_UPDATE_TOKEN: ${{ secrets.GH_UPDATE_TOKEN }}
+        run: |
+          {
+            echo "PG_PROXY_URL=$PG_PROXY_URL"
+            echo "PG_PROXY_DATABASE=$PG_PROXY_DATABASE"
+            echo "PG_PROXY_TOKEN=$PG_PROXY_TOKEN"
+            echo "NURUL_PG_PROXY_URL=$NURUL_PG_PROXY_URL"
+            echo "NURUL_PG_PROXY_DATABASE=$NURUL_PG_PROXY_DATABASE"
+            echo "NURUL_PG_PROXY_TOKEN=$NURUL_PG_PROXY_TOKEN"
+            [ -n "$GH_UPDATE_TOKEN" ] && echo "GH_UPDATE_TOKEN=$GH_UPDATE_TOKEN"
+          } > .env
+          true
+
+      - run: npm ci
+
+      - name: Build installer (no publish)
+        run: npx electron-builder --publish never
+        env:
+          npm_config_loglevel: warn
+
+      - name: Create release and upload installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" dist/Eternalgy-CI-Portal-Setup-*.exe dist/Eternalgy-CI-Portal-Setup-*.exe.blockmap dist/latest.yml \
+            --title "${TAG#v}" --generate-notes --verify-tag || \
+          gh release upload "$TAG" dist/Eternalgy-CI-Portal-Setup-*.exe dist/Eternalgy-CI-Portal-Setup-*.exe.blockmap dist/latest.yml --clobber
