@@ -54,7 +54,7 @@ jobs:
       - run: npm ci
 
       - name: Build installer (no publish)
-        run: npx electron-builder --publish never
+        run: node scripts/make-db-bundle.js && npx electron-builder --publish never
         env:
           npm_config_loglevel: warn
 
