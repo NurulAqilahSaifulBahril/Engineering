@@ -134,8 +134,11 @@ function dbConfigPath(){ return path.join(app.getPath('userData'), 'portal-db.en
 let dbEnvCache = null;
 function dbEnv(){
   if(dbEnvCache) return dbEnvCache;
-  try { dbEnvCache = parseEnv(fs.readFileSync(dbConfigPath(), 'utf8')); }
-  catch { dbEnvCache = {}; }
+  // A file imported on this PC wins; otherwise use the connection file bundled in the installer.
+  for(const p of [dbConfigPath(), path.join(process.resourcesPath || '', 'portal-db.env')]){
+    try { dbEnvCache = parseEnv(fs.readFileSync(p, 'utf8')); return dbEnvCache; } catch {}
+  }
+  dbEnvCache = {};
   return dbEnvCache;
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "eternalgy-ci-portal",
   "productName": "Eternalgy C&I Portal",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Commercial department portal for solar C&I projects — pipeline, projects, materials, design, savings, GITA, installation reports, KPIs.",
   "main": "main.js",
   "author": "Eternalgy",
@@ -12,7 +12,10 @@
     "web": "node server.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "release": "electron-builder --publish always"
+    "release": "electron-builder --publish always",
+    "prerelease": "node scripts/make-db-bundle.js",
+    "predist": "node scripts/make-db-bundle.js",
+    "prepack": "node scripts/make-db-bundle.js"
   },
   "build": {
     "appId": "my.eternalgy.ciportal",
@@ -54,6 +57,12 @@
         "owner": "NurulAqilahSaifulBahril",
         "repo": "eternalgy-ci-portal",
         "releaseType": "release"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "bundled/portal-db.env",
+        "to": "portal-db.env"
       }
     ]
   },
