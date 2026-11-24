@@ -51,6 +51,10 @@ jobs:
           } > .env
           true
 
+      # Stop here (before building) if any database secret is blank or wrong.
+      - name: Check database keys work
+        run: node scripts/check-db-keys.js
+
       - run: npm ci
 
       - name: Build installer (no publish)

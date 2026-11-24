@@ -1027,6 +1027,7 @@ const EG_KV = (function(){
 })();
 window.EG_KV = EG_KV;   // the embedded generator reaches the same store through window.parent
 
+let sharedProblem = '';       // '' = fine | 'unreachable' = database did not answer | 'nokeys' = this PC has no database keys
 let storageAvailable = false; // true only when window.storage (live cross-user sync) works
 let localStorageAvailable = false; // true when this browser's localStorage works
 
@@ -1385,9 +1386,11 @@ async function loadSharedState(){
       }
     }
   }catch(err){
-    // key doesn't exist yet, or storage unavailable
-    if(window.storage) storageAvailable = true;
+    // The shared database did not answer. Remember that, so nothing local is ever written over the shared data.
+    if(window.storage){ storageAvailable = true; sharedProblem = 'unreachable'; }
   }
+  if(window.storage && !sharedProblem) sharedProblem = '';
+  else if(!window.storage && location.protocol === 'app:') sharedProblem = 'nokeys';
   // Fall back to this browser's local copy so data survives refreshes
   // even when window.storage isn't available at all.
   return loadLocalState();
@@ -1519,6 +1522,7 @@ function saveSharedState(){
     }catch(err){
       localStorageAvailable = false;
     }
+    if(sharedProblem){ setSyncStatus(false); return; }   // never overwrite shared data while it could not be read
     if(!storageAvailable){ setSyncStatus(true); return; }
     try{
       await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
@@ -1555,8 +1559,29 @@ function commit(){
   saveSharedState();
 }
 
+// Try to reach the shared database again after a failed start. Returns true once it answers.
+async function retrySharedState(){
+  if(!window.storage) return false;
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if(res && res.value){ state = JSON.parse(res.value); migrateState(); ensureDefaultAdmin(); }
+    sharedProblem = '';
+    if(/shared database|database keys/i.test(authError)) authError = '';
+    reattachCurrentUser();
+    auditSnapshot = takeAuditSnapshot();
+    setSyncStatus(true);
+    return true;
+  }catch(e){ return false; }
+}
+function sharedProblemText(){
+  if(sharedProblem === 'unreachable') return "Can't reach the shared database, so the accounts can't load. Check this PC's internet connection, then press Retry.";
+  if(sharedProblem === 'nokeys') return 'This PC has no database keys, so the shared accounts can\'t load. Use File → Database Connection to import the connection file, then restart the app.';
+  return '';
+}
+
 // Poll for teammates' changes, but don't yank focus away from an active input
 setInterval(async ()=>{
+  if(sharedProblem === 'unreachable'){ if(await retrySharedState() && !currentUser) renderAuthScreen(); return; }
   if(!storageAvailable) return;
   const active = document.activeElement;
   if(active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.tagName==='SELECT')) return;
@@ -1864,13 +1889,14 @@ function renderAuthScreen(){
     return;
   }
 
+  const problemHtml = sharedProblem ? `<div class="auth-error">${escapeHtml(sharedProblemText())}${sharedProblem === 'unreachable' ? ' <a href="#" id="sharedRetry">Retry</a>' : ''}</div>` : '';
   root.innerHTML = `
     <div class="auth-screen">
       <form class="auth-card" id="phoneForm" autocomplete="on">
         ${logo}
         <h2>Sign in</h2>
         <p class="auth-sub">Eternalgy C&amp;I Portal — Commercial Department</p>
-        ${errorHtml}${noticeHtml}
+        ${problemHtml}${errorHtml}${noticeHtml}
         <div class="auth-field">
           <label for="loginPhone">Phone number</label>
           <input type="tel" id="loginPhone" autocomplete="tel" inputmode="tel" placeholder="e.g. 012 345 6789" required>
@@ -1904,6 +1930,15 @@ function attachAuthHandlers(){
   back && back.addEventListener('click', e=>{
     e.preventDefault();
     authMode = 'phone'; otpPhone = ''; otpStaff = null; authError = ''; authNotice = '';
+    renderAuthScreen();
+  });
+
+  const retry = document.getElementById('sharedRetry');
+  retry && retry.addEventListener('click', async e=>{
+    e.preventDefault();
+    retry.textContent = 'Trying…';
+    const ok = await retrySharedState();
+    if(ok) authError = '';
     renderAuthScreen();
   });
 
@@ -1944,6 +1979,7 @@ async function requestOtp(rawPhone){
   if(btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
   const res = await staffLookup(phone);
   if(res && res.allowed && res.name) return sendOtp(phone, { name: res.name });
+  if(sharedProblem) return fail(sharedProblemText());
   if(res && res.reason === 'not-allowed') return fail("Your department doesn't have access to this portal. Ask an administrator.");
   return fail("That phone number isn't registered. Ask an administrator to add it.");
 }
