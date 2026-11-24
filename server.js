@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { parseEnv, searchInvoices, staffSignIn } = require('./invoice-lookup');
+const { parseEnv, searchInvoices, staffSignIn, kvGet, kvSet } = require('./invoice-lookup');
 
 const PORT = process.env.PORT || 5173;
 const ROOT = __dirname;
@@ -23,6 +23,20 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
+// Shared portal data, same table the desktop app uses (NUrul_DB public.portal_kv), so the browser
+// version and the installed app always show the same accounts and records. Only the portal's own
+// state key is served, and only to this computer (the server listens on 127.0.0.1).
+const SHARED_KEYS = new Set(['solarops_state_v1']);
+const kvEnabled = () => !!(ENV.NURUL_PG_PROXY_URL && ENV.NURUL_PG_PROXY_DATABASE && ENV.NURUL_PG_PROXY_TOKEN);
+function readBody(req, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', c => { size += c.length; if (size > limit) { reject(new Error('too large')); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
 function sendJson(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
@@ -34,6 +48,25 @@ http.createServer((req, res) => {
     const q = new URL(req.url, 'http://x').searchParams.get('q') || '';
     searchInvoices(ENV, q).then(r => sendJson(res, r.status, r.body));
     return;
+  }
+  if (rel === '/api/kv/enabled') { sendJson(res, 200, { enabled: kvEnabled() }); return; }
+  if (rel === '/api/kv') {
+    if (!kvEnabled()) { sendJson(res, 503, { error: 'NUrul_DB is not set up on this PC.' }); return; }
+    if (req.method === 'GET') {
+      const key = new URL(req.url, 'http://x').searchParams.get('key') || '';
+      if (!SHARED_KEYS.has(key)) { sendJson(res, 403, { error: 'Unknown key' }); return; }
+      kvGet(ENV, key).then(v => sendJson(res, 200, { value: v })).catch(() => sendJson(res, 502, { error: 'NUrul_DB unreachable' }));
+      return;
+    }
+    if (req.method === 'POST') {
+      readBody(req, 40 * 1024 * 1024).then(text => {
+        const { key, value } = JSON.parse(text || '{}');
+        if (!SHARED_KEYS.has(key) || typeof value !== 'string') { sendJson(res, 400, { error: 'Bad request' }); return; }
+        return kvSet(ENV, key, value, 'browser:' + require('os').userInfo().username).then(() => sendJson(res, 200, { ok: true }));
+      }).catch(() => sendJson(res, 502, { error: 'Save failed' }));
+      return;
+    }
+    sendJson(res, 405, { error: 'Method not allowed' }); return;
   }
   if (rel === '/api/staff-signin') {
     const p = new URL(req.url, 'http://x').searchParams.get('phone') || '';
@@ -54,4 +87,4 @@ http.createServer((req, res) => {
     });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`Eternalgy portal running at http://localhost:${PORT}`));
+}).listen(PORT, '127.0.0.1', () => console.log(`Eternalgy portal running at http://localhost:${PORT}`));

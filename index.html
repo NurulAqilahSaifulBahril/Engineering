@@ -8254,7 +8254,22 @@ function ensureDefaultAdmin(){
 /* ---------------------------------------------------------
    INIT
 --------------------------------------------------------- */
+// In a normal browser (no Electron bridge) the local server hands out the same NUrul_DB shared data the
+// desktop app uses, so both show exactly the same accounts and records.
+async function installBrowserSharedStorage(){
+  if(window.storage || !/^https?:$/.test(location.protocol)) return;
+  try{
+    const j = await (await fetch('/api/kv/enabled')).json();
+    if(!j || !j.enabled) return;
+    window.storage = {
+      get: async (key) => { const r = await fetch('/api/kv?key=' + encodeURIComponent(key)); if(!r.ok) throw new Error('kv get'); return r.json(); },
+      set: async (key, value) => { const r = await fetch('/api/kv', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key, value }) }); if(!r.ok) throw new Error('kv set'); return r.json(); }
+    };
+  }catch(e){ /* server without NUrul_DB keys: stay local-only */ }
+}
+
 (async function init(){
+  await installBrowserSharedStorage();
   const found = await loadSharedState();
   if(!found) seedData();
   migrateState();   // idempotent: also covers the fresh-seed path
