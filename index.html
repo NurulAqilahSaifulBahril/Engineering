@@ -76,7 +76,10 @@
     background:linear-gradient(180deg, var(--sidebar-a) 0%, var(--sidebar-b) 100%);
     color:#EAF5F0; padding:22px 16px; position:sticky; top:0; height:100vh;
     display:flex; flex-direction:column; gap:22px;
+    overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none;   /* scrolls, but the bar is hidden */
   }
+  .sidebar::-webkit-scrollbar{ display:none; }
+  .sidebar > *{ flex-shrink:0; }
   .brand{padding:0 6px;}
   .brand .brand-logo{ width:100%; max-width:172px; height:auto; display:block; margin-bottom:12px;
     background:#fff; border-radius:6px; padding:6px 8px; }
@@ -419,6 +422,11 @@
   .pipeline-col h3{font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--ink-soft); margin:0 0 10px;}
   .pipeline-card{ background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:9px 10px; margin-bottom:8px; font-size:12.5px; }
   .pipeline-card .lead-name{font-weight:600; color:var(--navy); display:block; margin-bottom:3px;}
+  .pipeline-card .lead-name[data-pipe-toggle]{cursor:pointer; margin-bottom:0; display:flex; justify-content:space-between; align-items:flex-start; gap:6px;}
+  .pipeline-card .lead-name[data-pipe-toggle]:hover{color:var(--amber-ink);}
+  .pipeline-card .lead-name .pipe-caret{font-size:10px; color:var(--ink-soft); flex-shrink:0; margin-top:2px;}
+  .pipeline-card.compact{padding:7px 10px; margin-bottom:5px;}
+  .pipeline-card .pipeline-details{margin-top:6px; padding-top:6px; border-top:1px solid var(--line);}
   .pipeline-card select{margin-top:6px; font-size:11.5px; padding:5px 6px;}
   .pipeline-card .kw{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--amber-ink);}
   .pipeline-card-meta{font-size:11px; color:var(--ink-soft); margin-top:4px;}
@@ -578,7 +586,8 @@
     box-shadow:0 24px 60px rgba(0,0,0,.32);
   }
   .auth-card .auth-logo{ width:100%; max-width:190px; height:auto; display:block; margin:0 auto 22px; }
-  html[data-theme="dark"] .auth-card .auth-logo{ background:#fff; border-radius:6px; padding:6px 8px; box-sizing:border-box; }
+  /* dark theme: no white box behind the logo; draw it in white so it sits on the dark background */
+  html[data-theme="dark"] .auth-card .auth-logo, html[data-theme="dark"] .brand .brand-logo{ background:transparent; padding:0; filter:brightness(0) invert(1); }
   .auth-card h2{ font-size:24px; margin:0 0 6px; color:var(--navy); text-align:center; }
   .auth-card .auth-sub{ font-size:13.5px; color:var(--ink-soft); margin:0 0 28px; text-align:center; line-height:1.5; }
   .auth-card label{ display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-soft); font-weight:600; margin-bottom:7px; }
@@ -1101,6 +1110,7 @@ function autoLostSweep(){
     if(!isOpenStage(l.stage)) return;
     if(dealModalOpen && editingLeadId === l.id) return;            // never change a deal while it is open in the edit form
     if(l.lostSnoozeUntil && l.lostSnoozeUntil >= today) return;    // grace period after a reactivation
+    if(l.pay) return;                                              // linked to a prod_main invoice: the payment rules below decide instead
     const age = proposalAgeDays(l); if(age === null || age <= LOST_AFTER_DAYS) return;
     applyStageChange(l, LOST_STAGE, { date: today, reason: LOST_AUTO_REASON,
       remarks: 'Proposal issued ' + trkFmt(rptDateKey(l.proposalIssuedDate)) + ' (' + age + ' days ago) and still not won — marked Lost automatically.' });
@@ -1110,6 +1120,97 @@ function autoLostSweep(){
   });
   if(changed){ try{ trackChanges(); }catch(e){} }
   return changed;
+}
+/* ---- Payment rules (data from prod_main public.payment) ----
+   Paid MORE than PAID_WON_PCT % of the invoice total  -> Closed Won.
+   No payment for more than NO_PAYMENT_LOST_DAYS days while paid is PAID_WON_PCT % or less -> Lost.
+   Matched by invoice number first; if the deal has none, by customer name (only when exactly one invoice has that name). */
+const PAID_WON_PCT = 5, NO_PAYMENT_LOST_DAYS = 60;
+const LOST_NOPAY_REASON = 'Auto-lost (no payment for 60 days)';
+function payPct(p){ return p && p.totalAmount > 0 ? (p.paidAmount / p.totalAmount) * 100 : 0; }
+function payDaysSince(p){ const ref = (p && (p.lastPaymentDate || p.invoiceDate)) || ''; return /^\d{4}-\d{2}-\d{2}$/.test(ref) ? calDiffDays(ref, rptTodayISO()) : null; }
+function payRuleStage(p){            // stage the rules point to ('' = no change)
+  if(!p) return '';
+  if(p.installComplete) return 'Installation Completed';   // NUrul_DB installation_jobs.customer_availability_status = 'complete'
+  if(payPct(p) > PAID_WON_PCT) return 'Closed Won';
+  const d = payDaysSince(p); if(d !== null && d > NO_PAYMENT_LOST_DAYS) return LOST_STAGE;
+  return '';
+}
+function payNoteHtml(p){
+  if(!p) return '';
+  const pct = payPct(p), d = payDaysSince(p), rm = n => 'RM ' + Math.round(n||0).toLocaleString();
+  const last = p.lastPaymentDate ? 'last payment ' + trkFmt(p.lastPaymentDate) + (d !== null ? ' (' + d + ' days ago)' : '') : (p.paidAmount > 0 ? 'last payment date unknown' : 'no payment yet' + (d !== null ? ' · invoice ' + d + ' days old' : ''));
+  const inst = p.installComplete ? ' · 🔧 Installation complete' + (p.installationDate ? ' ' + trkFmt(p.installationDate) : '') + ' → Installation Completed' : '';
+  const rule = p.installComplete ? '' : pct > PAID_WON_PCT ? '→ Closed Won (paid above ' + PAID_WON_PCT + '%)' : (d !== null && d > NO_PAYMENT_LOST_DAYS ? '→ Lost (no payment for over ' + NO_PAYMENT_LOST_DAYS + ' days)' : '');
+  return '💰 Paid ' + rm(p.paidAmount) + ' of ' + rm(p.totalAmount) + ' (' + pct.toFixed(1) + '%) · ' + last + (rule ? ' ' + rule : '') + inst;
+}
+async function fetchInvoicePayments(numbers, names){
+  try{
+    if(window.portalData && typeof window.portalData.invoicePayments === 'function'){
+      const r = await window.portalData.invoicePayments({ numbers, names });
+      return r && r.ok ? (r.invoices || []) : null;
+    }
+    if(!/^https?:$/.test(location.protocol)) return null;
+    const r = await fetch('/api/invoice-payments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ numbers, names }) });
+    if(!r.ok) return null;
+    return (await r.json()).invoices || [];
+  }catch(e){ return null; }
+}
+function matchInvoicePayment(l, rows){
+  const num = String(l.invoiceNumber || '').trim(), nm = String(l.name || '').trim().toLowerCase();
+  const nameHit = x => { const c = x.customerName.toLowerCase(); return nm.length >= 6 && (c === nm || c.includes(nm) || nm.includes(c)); };
+  if(num){
+    const byNum = rows.filter(x => x.invoiceNumber === num);
+    if(byNum.length === 1) return byNum[0];
+    if(byNum.length > 1){ const both = byNum.filter(nameHit); return both.length === 1 ? both[0] : null; }   // same number on two invoices: customer name decides, otherwise leave it alone
+    return null;
+  }
+  const hits = rows.filter(nameHit);
+  return hits.length === 1 ? hits[0] : null;
+}
+// Apply the rules to one deal. Returns true when the deal changed.
+function applyPaymentRules(l, row){
+  const today = rptTodayISO();
+  const p = { paidAmount:row.paidAmount, totalAmount:row.totalAmount, lastPaymentDate:row.lastPaymentDate, invoiceDate:row.invoiceDate, installComplete:!!row.installationComplete, installationDate:row.installationDate || '' };
+  let changed = JSON.stringify(l.pay || null) !== JSON.stringify(p);
+  l.pay = p;
+  if(row.invoiceNumber && !l.invoiceNumber){ l.invoiceNumber = row.invoiceNumber; changed = true; }
+  if(dealModalOpen && editingLeadId === l.id) return changed;      // never change a deal while it is open in the edit form
+  const want = payRuleStage(p);
+  if(want === 'Installation Completed'){
+    if(p.installationDate && !l.installationDate){ l.installationDate = p.installationDate; changed = true; }
+    if(l.stage !== 'Installation Completed'){ applyStageChange(l, 'Installation Completed'); maybeConvertToProjectClient(l); changed = true; }
+  }else if(want === 'Closed Won' && !isWonStage(l.stage)){
+    applyStageChange(l, 'Closed Won');
+    maybeConvertToProjectClient(l);
+    changed = true;
+  }else if(want === LOST_STAGE && isOpenStage(l.stage) && !(l.lostSnoozeUntil && l.lostSnoozeUntil >= today)){
+    const d = payDaysSince(p);
+    applyStageChange(l, LOST_STAGE, { date: today, reason: LOST_NOPAY_REASON,
+      remarks: (p.lastPaymentDate ? 'Last payment ' + trkFmt(p.lastPaymentDate) : 'No payment since invoice ' + trkFmt(p.invoiceDate)) + ' (' + d + ' days ago); paid ' + payPct(p).toFixed(1) + '% — marked Lost automatically.' });
+    l.lostAuto = true;
+    const h = l.lostHistory[l.lostHistory.length - 1]; if(h){ h.by = 'Auto (60-day payment rule)'; h.auto = true; }
+    changed = true;
+  }
+  return changed;
+}
+let paySweepBusy = false, paySweepLast = 0, paySweepSig = '';
+async function paymentSweep(force){
+  if(paySweepBusy || !state || !Array.isArray(state.leads) || !currentUser || sharedProblem) return;
+  if(!invoiceLookupAvailable()) return;
+  const leads = state.leads.filter(l => String(l.invoiceNumber || '').trim() || String(l.name || '').trim());
+  if(!leads.length) return;
+  const sig = leads.map(l => l.id + '|' + (l.invoiceNumber || '') + '|' + (l.name || '')).join(';');   // a new / edited deal is checked at once
+  if(!force && sig === paySweepSig && Date.now() - paySweepLast < 120000) return;
+  paySweepBusy = true; paySweepLast = Date.now(); paySweepSig = sig;
+  try{
+    const rows = await fetchInvoicePayments(leads.map(l => String(l.invoiceNumber || '').trim()).filter(Boolean), leads.filter(l => !String(l.invoiceNumber || '').trim()).map(l => l.name));
+    if(!rows) return;
+    let changed = false;
+    leads.forEach(l => { const r = matchInvoicePayment(l, rows); if(r && applyPaymentRules(l, r)) changed = true; });
+    if(changed){ try{ trackChanges(); }catch(e){} saveSharedState(); render(); }
+  }catch(e){ /* payments are optional: try again at the next refresh */ }
+  finally{ paySweepBusy = false; }
 }
 // The single place a stage changes. Keeps id / revisions / dates / documents untouched; records Lost + Reactivated facts.
 function applyStageChange(lead, newStage, info){
@@ -1261,6 +1362,14 @@ const INVOICE_FILL_DEAL = {
   dealAmount: r => r.projectAmount != null && isFinite(r.projectAmount) ? String(r.projectAmount) : '',
   dealKw: r => r.systemKwp != null && isFinite(r.systemKwp) && r.systemKwp > 0 ? String(r.systemKwp) : '',
   dealInstallDate: r => /^\d{4}-\d{2}-\d{2}$/.test(r.installationDate||'') ? r.installationDate : '',
+  // stage details from the payments: paid above 5% -> Closed Won; the note shows paid %, last payment and any rule result
+  afterPick: r => {
+    const p = { paidAmount:r.paidAmount||0, totalAmount:r.projectAmount||0, lastPaymentDate:r.lastPaymentDate||'', invoiceDate:r.invoiceDate||'', installComplete:!!r.installationComplete, installationDate:r.installationDate||'' };
+    const sel = document.getElementById('dealStage'), note = document.getElementById('dealPayNote');
+    const want = payRuleStage(p);
+    if(sel && (want === 'Closed Won' || want === 'Installation Completed')) sel.value = want;
+    if(note) note.textContent = payNoteHtml(p);
+  },
 };
 const INVOICE_FILL_DESIGN = { dsAgentName: r => r.agent, dsAddress: r => r.projectAddress };
 const INVOICE_FILL_PROJECT = {
@@ -1283,9 +1392,11 @@ function wireInvoiceSuggest(input, fill){
   const pick = r=>{
     if(r.customerName) input.value = r.customerName;
     Object.entries(fill || {}).forEach(([id, get])=>{
+      if(id === 'afterPick') return;
       const el = document.getElementById(id), val = get(r);
       if(el && val) el.value = val;
     });
+    if(fill && typeof fill.afterPick === 'function') fill.afterPick(r);
     close(); input.focus();
   };
   const paint = (msg)=>{
@@ -2943,6 +3054,7 @@ function render(){
   refreshUserChrome();
   if(currentPage === 'itadmin' && !isAdmin()) currentPage = 'pipeline';
   if(autoLostSweep()) saveSharedState();   // 50-day auto-Lost rule
+  if(currentPage === 'pipeline') setTimeout(()=>paymentSweep(false), 0);   // payments from prod_main (5% / 60-day rules), at most every 2 min
   document.querySelectorAll('#nav button').forEach(b=>{
     b.classList.toggle('active', b.dataset.page === currentPage);
   });
@@ -4475,6 +4587,7 @@ function pipelineDashboardStats(){
     </div>${trackingDashboardHtml()}`;
 }
 
+const pipeOpenIds = new Set();   // pipeline cards whose details are expanded (names-only list otherwise)
 function renderPipeline(){
   const q = pipelineSearchQuery.trim().toLowerCase();
   const filteredLeads = !q ? state.leads : state.leads.filter(l =>
@@ -4484,11 +4597,13 @@ function renderPipeline(){
   const cols = PIPE_STAGES.map(stage => {
     const leads = filteredLeads.filter(l => l.stage === stage);
     const cards = leads.map(l => `
-      <div class="pipeline-card">
-        <span class="lead-name">${escapeHtml(l.name)}</span>
+      <div class="pipeline-card ${pipeOpenIds.has(l.id) ? '' : 'compact'}">
+        <span class="lead-name" data-pipe-toggle="${l.id}" role="button" tabindex="0" aria-expanded="${pipeOpenIds.has(l.id)}" title="Click to show / hide details">${escapeHtml(l.name)}</span>
+        ${pipeOpenIds.has(l.id) ? `<div class="pipeline-details">
         <span class="kw">${l.kw||0} kWp${l.projectAmount ? ` · RM ${l.projectAmount.toLocaleString()}` : ''}</span>
         ${l.agent ? `<div class="pipeline-card-meta">👤 ${escapeHtml(l.agent)}</div>` : ''}
         ${l.probability ? `<div class="pipeline-card-meta">🎯 ${l.probability}% probability</div>` : ''}
+        ${l.pay ? `<div class="pipeline-card-meta">${escapeHtml(payNoteHtml(l.pay))}</div>` : ''}
         ${(l.stage==='Installation Completed' && l.installationDate) ? `<div class="pipeline-card-meta">🔧 Installed ${trkFmt(l.installationDate)}</div>` : ''}
         ${l.stage===LOST_STAGE ? `<div class="pipeline-card-meta" style="color:var(--red); font-weight:600;">❌ Lost${l.lostDate ? ' ' + trkFmt(l.lostDate) : ''}${l.lostReason ? ' — ' + escapeHtml(l.lostReason) : ''}${l.lostAuto ? ' 🤖' : ''}</div>` : ''}
         ${(l.stage!==LOST_STAGE && l.reactivatedDate) ? `<div class="pipeline-card-meta">♻ Reactivated ${trkFmt(l.reactivatedDate)}</div>` : ''}
@@ -4503,6 +4618,7 @@ function renderPipeline(){
           <button type="button" class="btn btn-ghost" data-open-proposal="${l.id}">📝 ${l.proposalId ? 'Open Proposal' : 'Create Proposal'}</button>
           <button type="button" class="btn btn-ghost" data-insight-lead="${l.id}" title="AI summary + activity timeline">🧠 Insights</button>
         </div>
+        </div>` : ''}
       </div>`).join('');
     return `<div class="pipeline-col"><h3>${stage} · ${leads.length}</h3>${cards}</div>`;
   }).join('');
@@ -4511,7 +4627,7 @@ function renderPipeline(){
     <div class="page-head">
       <div>
         <p class="eyebrow">Module 02</p><h2>Sales Pipeline</h2>
-        <p>Move each deal across stages as it progresses. Click a card to see and edit full details, or use the dropdown for a quick stage change.</p>
+        <p>Move each deal across stages as it progresses. Click a name to show its details (report, edit site, proposal, insights); click again to hide them.</p>
       </div>
       <button class="btn btn-ghost" type="button" data-pdf-export-btn>⬇ Export as PDF</button>
     </div>
@@ -4704,7 +4820,7 @@ function renderDealModal(){
           <div class="field"><label>Scheme</label><select id="dealScheme"><option value="">—</option>${schemeOptions}</select></div>
         </div>
         <div class="row">
-          <div class="field"><label>Stage</label><select id="dealStage">${stageOptions}</select></div>
+          <div class="field"><label>Stage</label><select id="dealStage">${stageOptions}</select><div id="dealPayNote" style="font-size:11px; color:var(--ink-soft); margin-top:4px;">${lead && lead.pay ? escapeHtml(payNoteHtml(lead.pay)) : 'Pick an invoice above to fill the stage from its payments (installation complete = Installation Completed; paid above 5% = Closed Won; no payment for over 60 days = Lost).'}</div></div>
           <div class="field"><label>Expected Close Date</label><input type="date" id="dealCloseDate" value="${v('expectedCloseDate')}"></div>
         </div>
         <div class="row">
@@ -6373,6 +6489,12 @@ function attachPageHandlers(){
       });
     });
 
+    document.querySelectorAll('[data-pipe-toggle]').forEach(el=>{
+      const toggle = ()=>{ const id = parseInt(el.dataset.pipeToggle); if(pipeOpenIds.has(id)) pipeOpenIds.delete(id); else pipeOpenIds.add(id); render(); };
+      el.addEventListener('click', toggle);
+      el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+    });
+
     document.querySelectorAll('[data-see-deal-report]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         dealReportViewId = parseInt(btn.dataset.seeDealReport);
@@ -7573,7 +7695,7 @@ function renderFeatRoot(){
 const _renderOrig = render;
 render = function(){ _renderOrig(); try{ refreshTopbar(); renderFeatRoot(); }catch(err){ console.error('feature refresh failed', err); } };
 setInterval(()=>{ try{ refreshTopbar(); }catch(e){} }, 60000);
-setInterval(()=>{ try{ if(autoLostSweep()){ saveSharedState(); render(); } }catch(e){} }, 3600000);   // tab left open past midnight
+setInterval(()=>{ try{ if(autoLostSweep()){ saveSharedState(); render(); } paymentSweep(true); }catch(e){} }, 3600000);   // tab left open past midnight
 
 /* =========================================================
    MODULE 14 — AI ASSISTANT

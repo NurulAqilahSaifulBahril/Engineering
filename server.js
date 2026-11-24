@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { parseEnv, searchInvoices, staffSignIn, kvGet, kvSet } = require('./invoice-lookup');
+const { parseEnv, searchInvoices, invoicePayments, staffSignIn, kvGet, kvSet } = require('./invoice-lookup');
 
 const PORT = process.env.PORT || 5173;
 const ROOT = __dirname;
@@ -47,6 +47,13 @@ http.createServer((req, res) => {
   if (rel === '/api/invoices') {
     const q = new URL(req.url, 'http://x').searchParams.get('q') || '';
     searchInvoices(ENV, q).then(r => sendJson(res, r.status, r.body));
+    return;
+  }
+  if (rel === '/api/invoice-payments' && req.method === 'POST') {
+    readBody(req, 1024 * 1024).then(text => {
+      const b = JSON.parse(text || '{}');
+      return invoicePayments(ENV, b.numbers, b.names).then(r => sendJson(res, r.status, r.body));
+    }).catch(() => sendJson(res, 400, { error: 'Bad request' }));
     return;
   }
   if (rel === '/api/kv/enabled') { sendJson(res, 200, { enabled: kvEnabled() }); return; }

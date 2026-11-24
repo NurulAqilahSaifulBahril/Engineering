@@ -5,7 +5,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs');
-const { parseEnv, searchInvoices, kvGet, kvSet, staffSignIn } = require('./invoice-lookup');
+const { parseEnv, searchInvoices, invoicePayments, kvGet, kvSet, staffSignIn } = require('./invoice-lookup');
 
 // The renderer is served over a custom app:// scheme rather than file://.
 // That gives it a real, stable origin, so localStorage (where the whole
@@ -160,6 +160,10 @@ function setupStaffSignIn(){
 }
 
 function setupInvoiceLookup(){
+  ipcMain.handle('invoices:payments', async (_event, p)=>{
+    const r = await invoicePayments(dbEnv(), p && p.numbers, p && p.names);
+    return { ok: r.status === 200, ...r.body };
+  });
   ipcMain.handle('invoices:search', async (_event, q)=>{
     const r = await searchInvoices(dbEnv(), typeof q === 'string' ? q : '');
     return { ok: r.status === 200, ...r.body };

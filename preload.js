@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // main process for invoice search results (the database keys stay in main).
 contextBridge.exposeInMainWorld('portalData', {
   searchInvoices: (q)=> ipcRenderer.invoke('invoices:search', String(q || '').slice(0, 80)),
+  invoicePayments: (p)=> ipcRenderer.invoke('invoices:payments', { numbers: (p && p.numbers) || [], names: (p && p.names) || [] }),
   staffSignIn: (phone)=> ipcRenderer.invoke('staff:signin', String(phone || '').slice(0, 20))
 });
 // Shared storage for the page (same shape as window.storage in Claude artifacts). Only exposed when this

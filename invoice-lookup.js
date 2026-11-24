@@ -61,19 +61,23 @@ async function installationInfo(env, rows) {
   const ids = [...new Set(rows.flatMap(x => [x.bubble_id, x.invoice_id]).filter(Boolean).map(String))];
   if (!url || !db || !token || !ids.length) return {};
   const out = {};
-  const at = id => (out[id] = out[id] || { date: '', supervisor: '', wiringTeam: '', installerTeam: '' });
+  const at = id => (out[id] = out[id] || { date: '', supervisor: '', wiringTeam: '', installerTeam: '', complete: false });
   const clean = v => (typeof v === 'string' ? v.trim() : '');
   const [jobs, groups] = await Promise.all([
     proxyQuery(url, db, token,
-      'select source_invoice_id, installation_date::text as d from public.installation_jobs ' +
-      'where source_invoice_id = any($1::text[]) and installation_date is not null', [ids])
+      'select source_invoice_id, installation_date::text as d, customer_availability_status as s from public.installation_jobs ' +
+      'where source_invoice_id = any($1::text[])', [ids])
       .catch(e => { console.warn('Installation date lookup failed:', e.message); return []; }),
     proxyQuery(url, db, token,
       "select g as grp from public.installation_ops_state s, jsonb_array_elements(coalesce(s.state->'groups', '[]'::jsonb)) g " +
       "where jsonb_typeof(g->'jobIds') = 'array' and (g->'jobIds') ?| $1::text[]", [ids])
       .catch(e => { console.warn('Installation group lookup failed:', e.message); return []; }),
   ]);
-  jobs.forEach(x => { at(x.source_invoice_id).date = String(x.d).slice(0, 10); });
+  jobs.forEach(x => {
+    const info = at(x.source_invoice_id);
+    if (x.d) info.date = String(x.d).slice(0, 10);
+    if (String(x.s || '').trim().toLowerCase() === 'complete') info.complete = true;
+  });
   const latest = {};
   groups.map(x => (typeof x.grp === 'string' ? JSON.parse(x.grp) : x.grp)).forEach(g => {
     const gDate = clean(g.installationDate).slice(0, 10);
@@ -92,6 +96,62 @@ async function installationInfo(env, rows) {
   return out;
 }
 
+// Payments recorded against an invoice (prod_main public.payment): total paid + the date of the latest payment (Malaysia date).
+const PAYMENT_JOIN = 'left join lateral (select sum(p.amount) as paid, max((p.payment_date::timestamptz at time zone \'Asia/Kuala_Lumpur\')::date)::text as last_pay ' +
+  'from public.payment p where p.linked_invoice = i.bubble_id) pay on true';
+
+// NUrul_DB installation_jobs: a job is complete when customer_availability_status = 'complete'.
+// Returns { [invoice bubble_id or id]: { complete, date } }. If NUrul_DB is unreachable this is just empty.
+async function completedJobs(env, rows) {
+  const { NURUL_PG_PROXY_URL: url, NURUL_PG_PROXY_DATABASE: db, NURUL_PG_PROXY_TOKEN: token } = env || {};
+  const ids = [...new Set(rows.flatMap(x => [x.bubble_id, x.invoice_id]).filter(Boolean).map(String))];
+  if (!url || !db || !token || !ids.length) return {};
+  try {
+    const jobs = await proxyQuery(url, db, token,
+      "select source_invoice_id, installation_date::text as d from public.installation_jobs " +
+      "where source_invoice_id = any($1::text[]) and lower(trim(customer_availability_status)) = 'complete'", [ids]);
+    const out = {};
+    jobs.forEach(x => { const o = out[x.source_invoice_id] = out[x.source_invoice_id] || { complete: true, date: '' }; if (x.d && String(x.d).slice(0, 10) > o.date) o.date = String(x.d).slice(0, 10); });
+    return out;
+  } catch (e) { console.warn('Installation status lookup failed:', e.message); return {}; }
+}
+
+// Payment status for deals already in the pipeline: looked up by invoice number and/or customer name.
+// Returns { status, body: { invoices: [{ invoiceNumber, customerName, totalAmount, paidAmount, lastPaymentDate, invoiceDate }] } }.
+async function invoicePayments(env, numbers, names) {
+  const { PG_PROXY_URL: url, PG_PROXY_DATABASE: db, PG_PROXY_TOKEN: token } = env || {};
+  if (!url || !db || !token) return { status: 503, body: { error: 'Payment lookup is not set up on this PC.', notConfigured: true } };
+  const clean = (arr, f) => [...new Set((Array.isArray(arr) ? arr : []).map(v => f(String(v || ''))).filter(Boolean))].slice(0, 300);
+  const nums = clean(numbers, s => s.trim().slice(0, 40));
+  const nms = clean(names, s => s.trim().toLowerCase().slice(0, 120));
+  if (!nums.length && !nms.length) return { status: 200, body: { invoices: [] } };
+  const sql = [
+    'select i.bubble_id, i.id::text as invoice_id, i.invoice_number, c.name as customer_name, i.total_amount, pay.paid as paid_amount, pay.last_pay,',
+    "  (i.invoice_date::timestamptz at time zone 'Asia/Kuala_Lumpur')::date::text as inv_date",
+    'from public.invoice i',
+    PAYMENT_JOIN,
+    'left join public.customer c on c.customer_id = i.linked_customer',
+    'where coalesce(i.is_deleted, false) = false and i.total_amount > 0',
+    '  and (i.invoice_number = any($1::text[]) or lower(trim(c.name)) = any($2::text[]))',
+    'order by i.created_date desc nulls last limit 500',
+  ].join('\n');
+  try {
+    const rows = await proxyQuery(url, db, token, sql, [nums, nms]);
+    const done = await completedJobs(env, rows);
+    return { status: 200, body: { invoices: rows.map(x => { const j = done[x.bubble_id] || done[x.invoice_id] || {}; return {
+      installationComplete: !!j.complete, installationDate: j.date || '',
+      invoiceNumber: x.invoice_number || '',
+      customerName: (x.customer_name || '').trim(),
+      totalAmount: Number(x.total_amount) || 0,
+      paidAmount: x.paid_amount == null ? 0 : Number(x.paid_amount),
+      lastPaymentDate: x.last_pay ? String(x.last_pay).slice(0, 10) : '',
+      invoiceDate: x.inv_date ? String(x.inv_date).slice(0, 10) : '',
+    }; }) } };
+  } catch (e) {
+    return { status: 502, body: { error: 'Payment lookup failed: ' + e.message } };
+  }
+}
+
 // Invoice search: invoice number or customer name. Read-only, max 20 rows.
 // Returns { status, body } — body is { source, invoices } or { error }.
 async function searchInvoices(env, rawQuery) {
@@ -108,12 +168,14 @@ async function searchInvoices(env, rawQuery) {
     "    nullif(concat_ws(', ', nullif(trim(c.address), ''), nullif(trim(concat_ws(' ', nullif(trim(c.postcode), ''), nullif(trim(c.city), ''))), ''), nullif(trim(c.state), '')), '')) as project_address,",
     '  coalesce(a.name, user_agent.name, agent_user.name) as agent_name,',
     '  i.panel_qty, i.panel_rating, pkg.description as package_text,',
-    '  coalesce(nullif(s.system_size_in_form_kwp, 0), nullif(s.system_size, 0)) as seda_kwp',
+    '  coalesce(nullif(s.system_size_in_form_kwp, 0), nullif(s.system_size, 0)) as seda_kwp,',
+    '  pay.paid as paid_amount, pay.last_pay, (i.invoice_date::timestamptz at time zone \'Asia/Kuala_Lumpur\')::date::text as inv_date',
     'from public.invoice i',
     // the package's own line item (earliest is_a_package row), as the Installation System reads it
     'left join lateral (select ii.description from public.invoice_item ii',
     '  where ii.linked_invoice = i.bubble_id and ii.is_a_package = true',
     '  order by ii.sort nulls last, ii.id limit 1) pkg on true',
+    PAYMENT_JOIN,
     'left join public.customer c on c.customer_id = i.linked_customer',
     'left join public.agent a on a.linked_user_login = i.linked_agent or a.bubble_id = i.linked_agent',
     'left join public."user" agent_user on agent_user.bubble_id = i.linked_agent',
@@ -131,6 +193,7 @@ async function searchInvoices(env, rawQuery) {
       source: db,
       invoices: rows.map(x => { const inst = install[x.bubble_id] || install[x.invoice_id] || {}; return {
         installationDate: inst.date || '',
+        installationComplete: !!inst.complete,
         supervisor: inst.supervisor || '',
         wiringTeam: inst.wiringTeam || '',
         installerTeam: inst.installerTeam || '',
@@ -142,6 +205,9 @@ async function searchInvoices(env, rawQuery) {
         agent: (x.agent_name || '').trim(),
         projectAmount: x.total_amount == null || x.total_amount === '' ? null : Number(x.total_amount),
         systemKwp: systemKwp(x),
+        paidAmount: x.paid_amount == null ? 0 : Number(x.paid_amount),
+        lastPaymentDate: x.last_pay ? String(x.last_pay).slice(0, 10) : '',
+        invoiceDate: x.inv_date ? String(x.inv_date).slice(0, 10) : '',
       }; }),
     } };
   } catch (e) {
@@ -208,4 +274,4 @@ async function staffSignIn(env, rawPhone) {
   }
 }
 
-module.exports = { parseEnv, searchInvoices, kvGet, kvSet, staffSignIn };
+module.exports = { parseEnv, searchInvoices, invoicePayments, kvGet, kvSet, staffSignIn };
