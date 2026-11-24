@@ -24,18 +24,25 @@ interrupt an edit in progress. There is also **File → Check for Updates…**.
 ## Signing in
 
 Sign-in is a **phone number + one-time code (OTP)**; there are no passwords. Every user has a phone number,
-set in **IT Admin → Users** (required when adding or editing a user). 
+set in **Admin → Users** (required when adding or editing a user). 
 
 **The OTP is a dummy for now:** after a registered number is entered, any 6 digits are accepted and no SMS is sent.
 The two places to swap in a real provider are `requestOtp()` (send) and `verifyOtp()` (check) in `index.html`.
 
+**Staff table.** A number that has no portal account is looked up in NUrul_DB (`public."user"`, column `contact`). If that
+person's `main_department` is one of `STAFF_SIGNIN_DEPARTMENTS` (in `invoice-lookup.js`: Engineering Dept, Project Department,
+Finance Dept, SEDA Administration, Sales Dept) and they are not blocked or pending, they can sign in, and a normal (non-admin)
+portal account is created on their first sign-in. Admins are only ever set inside the portal (Admin → Users), and an account set
+up there always takes priority. The lookup runs in the desktop app's main process or in `server.js`, so the database key never
+reaches the page.
+
 Every install has a built-in administrator, added on launch wherever it is missing (and given a number if it has none):
 
-| Username   | Phone number |
-|------------|--------------|
-| `IT Admin` | `0100000000` |
+| Account             | Phone number |
+|---------------------|--------------|
+| `IT Administrator`  | `0100000000` |
 
-Change that number in **IT Admin → Users**; once changed it sticks. Other accounts that came from the password days have
+Change that number in **Admin → Users**; once changed it sticks. Other accounts that came from the password days have
 no number yet and cannot sign in until an admin adds one. Numbers are matched as digits only (`+60 12-345 6789` = `0123456789`).
 Usernames may contain spaces; capitals and extra spaces are ignored when signing in.
 

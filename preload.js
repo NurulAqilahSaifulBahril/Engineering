@@ -6,7 +6,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the page can learn that an update is ready and ask to restart, and ask the
 // main process for invoice search results (the database keys stay in main).
 contextBridge.exposeInMainWorld('portalData', {
-  searchInvoices: (q)=> ipcRenderer.invoke('invoices:search', String(q || '').slice(0, 80))
+  searchInvoices: (q)=> ipcRenderer.invoke('invoices:search', String(q || '').slice(0, 80)),
+  staffSignIn: (phone)=> ipcRenderer.invoke('staff:signin', String(phone || '').slice(0, 20))
 });
 // Shared storage for the page (same shape as window.storage in Claude artifacts). Only exposed when this
 // PC has NUrul_DB keys; otherwise the portal stays local-only, as before.

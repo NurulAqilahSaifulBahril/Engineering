@@ -1596,6 +1596,7 @@ const OTP_LENGTH = 6;
 let currentUser = null;                 // the signed-in user object (lives in state.users)
 let authMode = 'phone';                 // 'phone' (enter number) | 'otp' (enter the code)
 let otpPhone = '';                      // number the code was "sent" to
+let otpStaff = null;                    // { name } when that number came from the staff table (no portal account yet)
 let authError = '';
 let authNotice = '';
 
@@ -1902,7 +1903,7 @@ function attachAuthHandlers(){
   const back = document.getElementById('otpBack');
   back && back.addEventListener('click', e=>{
     e.preventDefault();
-    authMode = 'phone'; otpPhone = ''; authError = ''; authNotice = '';
+    authMode = 'phone'; otpPhone = ''; otpStaff = null; authError = ''; authNotice = '';
     renderAuthScreen();
   });
 
@@ -1911,16 +1912,40 @@ function attachAuthHandlers(){
 }
 
 // Step 1: the user types their number; a code is "sent" if it belongs to an active account.
-function requestOtp(rawPhone){
-  const phone = normalizePhone(rawPhone);
-  if(!validPhone(phone)){ authError = 'Enter a valid phone number.'; authNotice = ''; renderAuthScreen(); return; }
-  const user = findUserByPhone(phone);
-  if(!user){ authError = "That phone number isn't registered. Ask an administrator to add it."; authNotice = ''; renderAuthScreen(); return; }
-  if(!user.active){ authError = 'That account has been deactivated. Ask an administrator to re-enable it.'; authNotice = ''; renderAuthScreen(); return; }
+// Staff-table lookup (NUrul_DB public."user"): done by the desktop app's main process or by server.js,
+// so the database key never reaches this page. Resolves to { allowed, name } or { allowed:false, reason }.
+async function staffLookup(phone){
+  try{
+    if(window.portalData && typeof window.portalData.staffSignIn === 'function') return await window.portalData.staffSignIn(phone);
+    const r = await fetch('/api/staff-signin?phone=' + encodeURIComponent(phone));
+    return await r.json();
+  }catch(e){ return { allowed:false, reason:'error' }; }
+}
+
+function sendOtp(phone, staff){
   // DUMMY OTP: nothing is actually sent yet. Plug the SMS / WhatsApp provider in here.
-  otpPhone = phone; authMode = 'otp'; authError = '';
+  otpPhone = phone; otpStaff = staff || null; authMode = 'otp'; authError = '';
   authNotice = 'Demo mode: no SMS is sent yet — type any ' + OTP_LENGTH + ' digits.';
   renderAuthScreen();
+}
+
+async function requestOtp(rawPhone){
+  const phone = normalizePhone(rawPhone);
+  const fail = msg => { authError = msg; authNotice = ''; renderAuthScreen(); };
+  if(!validPhone(phone)) return fail('Enter a valid phone number.');
+  // 1) accounts set up in the portal (Admin → Users) always win
+  const user = findUserByPhone(phone);
+  if(user){
+    if(!user.active) return fail('That account has been deactivated. Ask an administrator to re-enable it.');
+    return sendOtp(phone, null);
+  }
+  // 2) otherwise the staff table decides, for the allowed departments only
+  const btn = document.getElementById('loginSubmit');
+  if(btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
+  const res = await staffLookup(phone);
+  if(res && res.allowed && res.name) return sendOtp(phone, { name: res.name });
+  if(res && res.reason === 'not-allowed') return fail("Your department doesn't have access to this portal. Ask an administrator.");
+  return fail("That phone number isn't registered. Ask an administrator to add it.");
 }
 
 // DUMMY OTP: any 6 digits pass. Replace this with a real check against the code that was sent.
@@ -1930,7 +1955,20 @@ function verifyOtp(user, code){
 
 // Step 2: the user types the code.
 function submitOtp(code){
-  const user = findUserByPhone(otpPhone);
+  let user = findUserByPhone(otpPhone);
+  if(!user && otpStaff){
+    // First sign-in of someone from the staff table: give them a normal (non-admin) portal account.
+    // Verify the code first; the account is only created once it passes.
+    if(verifyOtp(null, code)){
+      user = makeUser(otpPhone, otpStaff.name, 'user');
+      state.users.push(user);
+      logEvent('IT Admin', user.name, 'Account created from the staff table');
+    } else {
+      authError = 'Enter the ' + OTP_LENGTH + '-digit code.'; authNotice = '';
+      renderAuthScreen();
+      return;
+    }
+  }
   if(!user || !user.active){ authMode = 'phone'; authError = 'That account is not available.'; renderAuthScreen(); return; }
   if(!verifyOtp(user, code)){
     authError = 'Enter the ' + OTP_LENGTH + '-digit code.'; authNotice = '';
@@ -1942,7 +1980,7 @@ function submitOtp(code){
   currentUser = user;
   user.lastLogin = new Date().toISOString();
   saveSession(user.id);
-  authError = ''; authNotice = ''; authMode = 'phone'; otpPhone = '';
+  authError = ''; authNotice = ''; authMode = 'phone'; otpPhone = ''; otpStaff = null;
   logEvent('IT Admin', user.name, 'Signed in');
   saveSharedState();
   auditSnapshot = takeAuditSnapshot();

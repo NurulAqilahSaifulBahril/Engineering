@@ -179,4 +179,33 @@ async function kvSet(env, key, value, who) {
   return true;
 }
 
-module.exports = { parseEnv, searchInvoices, kvGet, kvSet };
+// Sign-in by phone number against the staff table (NUrul_DB public."user"). Runs in the server / Electron
+// main process only; the page gets back just { allowed, name } — never the token or any other column.
+// Only these main_department values may sign in (a person can list several, separated by ";").
+const STAFF_SIGNIN_DEPARTMENTS = ['Engineering Dept', 'Project Department', 'Finance Dept', 'SEDA Administration', 'Sales Dept'];
+async function staffSignIn(env, rawPhone) {
+  let digits = String(rawPhone || '').replace(/\D+/g, '');
+  if (digits.length < 9 || digits.length > 13) return { status: 200, body: { allowed: false, reason: 'not-found' } };
+  let args;
+  try { args = nurul(env); } catch (e) { return { status: 503, body: { allowed: false, reason: 'not-configured' } }; }
+  try {
+    const rows = await proxyQuery(...args,
+      "select name, main_department, access_level::text as access_level from public.\"user\" " +
+      "where contact is not null and length(regexp_replace(contact, '\\D', '', 'g')) >= 9 " +
+      "and right(regexp_replace(contact, '\\D', '', 'g'), 9) = $1 limit 10",
+      [digits.slice(-9)]);
+    if (!rows.length) return { status: 200, body: { allowed: false, reason: 'not-found' } };
+    const ok = rows.find(r => {
+      const depts = String(r.main_department || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const inDept = depts.some(d => STAFF_SIGNIN_DEPARTMENTS.some(a => a.toLowerCase() === d));
+      const blocked = /\b(blocked|pending)\b/i.test(String(r.access_level || ''));
+      return inDept && !blocked && String(r.name || '').trim();
+    });
+    if (!ok) return { status: 200, body: { allowed: false, reason: 'not-allowed' } };
+    return { status: 200, body: { allowed: true, name: String(ok.name).trim().slice(0, 100) } };
+  } catch (e) {
+    return { status: 502, body: { allowed: false, reason: 'error' } };
+  }
+}
+
+module.exports = { parseEnv, searchInvoices, kvGet, kvSet, staffSignIn };

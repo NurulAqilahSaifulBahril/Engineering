@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { parseEnv, searchInvoices } = require('./invoice-lookup');
+const { parseEnv, searchInvoices, staffSignIn } = require('./invoice-lookup');
 
 const PORT = process.env.PORT || 5173;
 const ROOT = __dirname;
@@ -33,6 +33,11 @@ http.createServer((req, res) => {
   if (rel === '/api/invoices') {
     const q = new URL(req.url, 'http://x').searchParams.get('q') || '';
     searchInvoices(ENV, q).then(r => sendJson(res, r.status, r.body));
+    return;
+  }
+  if (rel === '/api/staff-signin') {
+    const p = new URL(req.url, 'http://x').searchParams.get('phone') || '';
+    staffSignIn(ENV, p).then(r => sendJson(res, r.status, r.body));
     return;
   }
   if (rel === '/') rel = '/index.html';
