@@ -23,16 +23,20 @@ interrupt an edit in progress. There is also **File → Check for Updates…**.
 
 ## Signing in
 
-Every install has a built-in administrator account, added on launch wherever it is missing
-(including data sets that already have other admins):
+Sign-in is a **phone number + one-time code (OTP)**; there are no passwords. Every user has a phone number,
+set in **IT Admin → Users** (required when adding or editing a user). 
 
-| Username   | Password   |
-|------------|------------|
-| `IT Admin` | `Admin123` |
+**The OTP is a dummy for now:** after a registered number is entered, any 6 digits are accepted and no SMS is sent.
+The two places to swap in a real provider are `requestOtp()` (send) and `verifyOtp()` (check) in `index.html`.
 
-There is no forced password change, and these values are public in this repository, so change
-the password in **IT Admin → Users** on each machine. Once the account exists it is left alone,
-so the changed password sticks. Add colleagues from **IT Admin → Users**.
+Every install has a built-in administrator, added on launch wherever it is missing (and given a number if it has none):
+
+| Username   | Phone number |
+|------------|--------------|
+| `IT Admin` | `0100000000` |
+
+Change that number in **IT Admin → Users**; once changed it sticks. Other accounts that came from the password days have
+no number yet and cannot sign in until an admin adds one. Numbers are matched as digits only (`+60 12-345 6789` = `0123456789`).
 Usernames may contain spaces; capitals and extra spaces are ignored when signing in.
 
 > **Scope of the sign-in.** This is an accountability layer, not a security boundary. The whole
@@ -46,11 +50,9 @@ Everything is stored in the app's own local storage on that machine — there is
 no server call. Consequences worth knowing:
 
 - Data is **per machine, per install**. Two people running the app do not see each other's data.
-- Moving data between machines is the **Backup (.json) / Restore backup** pair in the sidebar.
+- There is no backup/restore button any more; portal data is kept in the app's own storage (and the shared NUrul_DB where set up).
 - App updates preserve data. The app is served over a fixed `app://portal` origin precisely so
   storage survives a version change.
-- Backup files contain user password hashes. They are salted and stretched, but a backup is
-  not something to pass around casually.
 
 ## Edit log
 
