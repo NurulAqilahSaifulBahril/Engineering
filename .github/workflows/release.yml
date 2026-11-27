@@ -40,6 +40,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FILES="dist/Eternalgy-OM-Dashboard-Setup-*.exe dist/Eternalgy-OM-Dashboard-Setup-*.exe.blockmap dist/latest.yml"
+          FILES="dist/Eternalgy-OM-Dashboard-Setup-*.exe dist/Eternalgy-OM-Dashboard-Setup-*.exe.blockmap dist/latest.yml docs/Eternalgy-OM-Dashboard-User-Guide.pdf"
           gh release create "$TAG" $FILES --title "${TAG#v}" --generate-notes --verify-tag || \
           gh release upload "$TAG" $FILES --clobber

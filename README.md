@@ -1,10 +1,26 @@
 # Eternalgy O&M Dashboard
 
-Generates Operation & Maintenance reports from bill and solar figures (key them in, or load a sample), with print / save as PDF.
+The Engineering department's desktop app for operation & maintenance and engineering records: site issues and technician visits, rectification and solar saving reports, drawings, load profile jobs, O&M manuals, T&C reports, and summary exports.
+
+**User guide:** [docs/Eternalgy-OM-Dashboard-User-Guide.pdf](docs/Eternalgy-OM-Dashboard-User-Guide.pdf) (also attached to each release).
 
 ## Install
 
 Download `Eternalgy-OM-Dashboard-Setup-<version>.exe` from [Releases](https://github.com/NurulAqilahSaifulBahril/Engineering/releases/latest) and run it. The installed app checks for updates on launch (or Help → Check for Updates).
+
+## Shared data (NUrul_DB)
+
+Connected PCs share every record through NUrul_DB, in two tables the app creates and owns: `public.om_docs` (one row per record) and `public.om_blobs` (pictures). It never touches any other table.
+
+The installer contains **no database key**. Each PC connects once with **File → Database Connection…**, choosing a private connection file:
+
+```
+NURUL_PG_PROXY_URL=...
+NURUL_PG_PROXY_DATABASE=...
+NURUL_PG_PROXY_TOKEN=...
+```
+
+Hand this file out privately — never commit it or attach it to a release. The key is only used in the Electron main process (`om-db.js`); the page reaches the database through a fixed set of operations, never raw SQL. A PC without the file saves on that device only.
 
 ## Develop
 
@@ -13,15 +29,18 @@ npm install
 npm start          # run as a desktop app
 npm run web        # or serve in the browser on http://localhost:5174 (set $env:PORT to change)
 npm run dist       # build the installer into dist/
+npm run guide      # rebuild the user guide PDF from docs/guide.src.html
 ```
+
+`index.html` is the whole dashboard and also runs inside Claude. In the desktop app, `om-shim.js` (added to the page by `main.js`) stands in for the Claude runtime's `db`, `user` and `assets` services and backs them with NUrul_DB.
 
 ## Release
 
 Bump `version` in `package.json`, commit, then tag and push:
 
 ```powershell
-git tag v1.0.1
-git push origin main v1.0.1
+git tag v1.1.1
+git push origin main v1.1.1
 ```
 
-The **Release installer** GitHub Action builds the Windows installer and publishes it as a GitHub Release.
+The **Release installer** GitHub Action builds the Windows installer and publishes it, with the user guide, as a GitHub Release.
