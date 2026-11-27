@@ -1,7 +1,7 @@
 {
   "name": "eternalgy-om-dashboard",
   "productName": "Eternalgy O&M Dashboard",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Operation & Maintenance report generator: key in bill and solar figures, get a printable O&M report.",
   "main": "main.js",
   "author": "Eternalgy",
@@ -12,6 +12,8 @@
     "web": "node server.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish never",
+    "prepack": "node scripts/make-db-bundle.js",
+    "predist": "node scripts/make-db-bundle.js",
     "guide": "electron docs/build-guide.js docs/guide.src.html docs/Eternalgy-OM-Dashboard-User-Guide.pdf"
   },
   "build": {
@@ -50,6 +52,12 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Eternalgy O&M Dashboard"
     },
+    "extraResources": [
+      {
+        "from": "bundled/om-db.env",
+        "to": "om-db.env"
+      }
+    ],
     "publish": [
       {
         "provider": "github",

@@ -12,15 +12,11 @@ Download `Eternalgy-OM-Dashboard-Setup-<version>.exe` from [Releases](https://gi
 
 Connected PCs share every record through NUrul_DB, in two tables the app creates and owns: `public.om_docs` (one row per record) and `public.om_blobs` (pictures). It never touches any other table.
 
-The installer contains **no database key**. Each PC connects once with **File → Database Connection…**, choosing a private connection file:
+The release build bundles the key into the installer from GitHub Actions secrets `NURUL_PG_PROXY_URL`, `NURUL_PG_PROXY_DATABASE` and `NURUL_PG_PROXY_TOKEN` (Settings → Secrets and variables → Actions), so installed PCs connect with no setup. The workflow checks the keys connect before it builds. Local builds (`npm run dist`) take them from `.env` in this folder or the one above; without one the build has no key and PCs save locally.
 
-```
-NURUL_PG_PROXY_URL=...
-NURUL_PG_PROXY_DATABASE=...
-NURUL_PG_PROXY_TOKEN=...
-```
+A PC can still use a different connection file via **File → Database Connection…**. The key is only used in the Electron main process (`om-db.js`); the page reaches the database through a fixed set of operations, never raw SQL.
 
-Hand this file out privately — never commit it or attach it to a release. The key is only used in the Electron main process (`om-db.js`); the page reaches the database through a fixed set of operations, never raw SQL. A PC without the file saves on that device only.
+> **Note:** this repo and its releases are public, so anyone who downloads the installer can read the bundled key, which has full access to NUrul_DB. Making the repo private and rotating the key is recommended.
 
 ## Develop
 

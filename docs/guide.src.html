@@ -83,7 +83,7 @@
     <img class="hero-logo" src="logo-white.png" alt="Eternalgy">
     <h1>Eternalgy O&amp;M Dashboard</h1>
     <div class="hero-sub">User Guide</div>
-    <p class="hero-meta">Desktop app version 1.1.0 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Engineering — Electrical and O&amp;M</p>
+    <p class="hero-meta">Desktop app version 1.2.0 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Engineering — Electrical and O&amp;M</p>
   </div>
   <div class="hero-rule"></div>
   <div class="cover-body">
@@ -107,8 +107,8 @@
       <li><b>13</b>Good to know</li>
     </ul>
     <div class="note warn" style="margin-top:8mm">
-      <span class="label">Important — connect to NUrul_DB first</span>
-      <p>Once a PC is connected to <strong>NUrul_DB</strong> (section 1.3), every record is <strong>shared with the whole team</strong> and the screens say <em>“Shared with your team”</em>. Until then the app saves <strong>on this computer only</strong> (<em>“Saved on this device only”</em>) and colleagues cannot see your work.</p>
+      <span class="label">Shared with your team</span>
+      <p>The app saves every record to the company database, <strong>NUrul_DB</strong>, so the whole team works on the same issues, reports and jobs (section 1.3). The screens say <em>“Shared with your team”</em>. If they ever say <em>“Saved on this device only”</em>, the app could not reach NUrul_DB — see section 13.1.</p>
     </div>
   </div>
 </section>
@@ -131,15 +131,13 @@
     <li>To check yourself: <span class="ui">Help → Check for Updates…</span>. <span class="ui">Help</span> also shows the version you are on.</li>
     <li>Updating keeps all your saved records and drafts.</li>
   </ul>
-  <h3><span class="n">1.3</span>Connect to NUrul_DB (once per PC)</h3>
-  <p>Shared records live in the company database, <strong>NUrul_DB</strong>. The installer does not contain the database key — your admin gives you a small <strong>connection file</strong> (for example <code>om-db.env</code>) privately. Keep it to yourself: anyone with the file can reach the database.</p>
+  <h3><span class="n">1.3</span>Shared data in NUrul_DB</h3>
+  <p>Shared records live in the company database, <strong>NUrul_DB</strong>. The app connects to it <strong>automatically</strong> — there is nothing to set up. The dashboards say <em>“Shared with your team”</em> and <span class="ui">File</span> shows <em>“NUrul_DB: connected (built in)”</em>.</p>
   <ol class="steps">
-    <li>Click <span class="ui">File → Database Connection…</span> and choose the connection file.</li>
-    <li>The app tests it. On success you see <em>“Connected to NUrul_DB”</em> and the app reloads; the dashboards now say <em>“Shared with your team”</em>.</li>
-    <li>Click <span class="ui">File → Your name…</span> and type your name. It is shown as <strong>Logged by</strong> on records you save.</li>
+    <li>The first time you open the app, click <span class="ui">File → Your name…</span> and type your name. It is shown as <strong>Logged by</strong> on records you save (until you set it, the Windows login name is used).</li>
   </ol>
   <ul class="b">
-    <li>The <span class="ui">File</span> menu always shows whether this PC is connected. <span class="ui">Disconnect from NUrul_DB</span> takes it off again.</li>
+    <li>If your admin gives you a different connection file, load it with <span class="ui">File → Database Connection…</span>; <span class="ui">Disconnect from NUrul_DB</span> then returns to the built-in connection.</li>
     <li>Colleagues' changes appear within about 15 seconds, and straight away when you switch back to the app.</li>
     <li>Records saved on a PC <strong>before</strong> it was connected stay on that PC and are not shown while connected.</li>
   </ul>
@@ -455,7 +453,7 @@
     <tr><td>How do I save a PDF?</td><td><span class="ui">Print / Save as PDF</span> → printer <strong>Microsoft Print to PDF</strong> → <span class="ui">Print</span> → choose the folder.</td></tr>
     <tr><td>The screen looks too big or small.</td><td><code>Ctrl + =</code> / <code>Ctrl + −</code>, or <code>Ctrl + 0</code> to reset.</td></tr>
     <tr><td>A ticket is marked urgent by mistake.</td><td>Urgency comes from the issue type and the two tick boxes — correct the issue details; see the table in section 3.2.</td></tr>
-    <tr><td>Colleagues can't see my records.</td><td>Check the label under the page title. <em>“Saved on this device only”</em> means this PC is not connected — see section 1.3.</td></tr>
+    <tr><td>Colleagues can't see my records.</td><td>Check the label under the page title. <em>“Saved on this device only”</em> means the app could not reach NUrul_DB when it opened — check your internet connection, then use <span class="ui">View → Reload</span>.</td></tr>
     <tr><td>Which version do I have?</td><td><span class="ui">Help</span> menu.</td></tr>
   </table>
 </section>

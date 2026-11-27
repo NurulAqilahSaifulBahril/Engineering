@@ -30,6 +30,17 @@ jobs:
 
       - run: npm ci
 
+      # NUrul_DB keys come from Actions secrets and are built into the installer,
+      # so installed PCs connect with no setup. A blank or wrong secret stops the build here.
+      - name: Bundle and check NUrul_DB keys
+        env:
+          NURUL_PG_PROXY_URL: ${{ secrets.NURUL_PG_PROXY_URL }}
+          NURUL_PG_PROXY_DATABASE: ${{ secrets.NURUL_PG_PROXY_DATABASE }}
+          NURUL_PG_PROXY_TOKEN: ${{ secrets.NURUL_PG_PROXY_TOKEN }}
+        run: |
+          node scripts/make-db-bundle.js
+          node scripts/check-db-keys.js
+
       - name: Build installer (no publish)
         run: npx electron-builder --publish never
         env:
