@@ -4,83 +4,88 @@
 <meta charset="UTF-8">
 <title>Engineering — Electrical &amp; O&amp;M Portal: Install &amp; Update</title>
 <style>
-  /* Source for docs/Eternalgy-OM-Dashboard-User-Guide.pdf: a one-page install & update guide.
-     The detailed guide is docs/manual.src.html. Rebuild both with: npm run guide */
+  /* Source for docs/Eternalgy-OM-Dashboard-User-Guide.pdf: a one-page install & update guide,
+     read top to bottom. The detailed guide is docs/manual.src.html. Rebuild both with: npm run guide */
   @page { size: A4; margin: 0; }
   :root{ --ink:#1C2430; --soft:#5A6675; --hero:#111318; --amber:#D98E00; --amber-soft:#FFF4DE;
     --teal:#0F766E; --line:#E3E8EF; --blue:#0969DA; }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
-  body{ font-family:"Segoe UI", system-ui, Helvetica, Arial, sans-serif; color:var(--ink); font-size:9.6pt; line-height:1.42; }
+  body{ font-family:"Segoe UI", system-ui, Helvetica, Arial, sans-serif; color:var(--ink); font-size:9.4pt; line-height:1.4; }
   .sheet{ height:297mm; overflow:hidden; display:flex; flex-direction:column; }
 
-  .hero{ background:var(--hero); color:#fff; padding:8mm 14mm 6mm; display:flex; align-items:center; gap:8mm; }
+  .hero{ background:var(--hero); color:#fff; padding:7mm 16mm 5.5mm; display:flex; align-items:center; gap:8mm; }
   .hero img{ height:22px; }
-  .hero h1{ font-size:18pt; line-height:1.15; margin:0; letter-spacing:-.3px; }
-  .hero .sub{ font-size:11.5pt; font-weight:700; color:var(--amber); margin-top:.8mm; }
-  .hero .meta{ font-size:8pt; color:#9AA3B2; margin-top:.8mm; }
+  .hero h1{ font-size:17pt; line-height:1.15; margin:0; letter-spacing:-.3px; }
+  .hero .sub{ font-size:11pt; font-weight:700; color:var(--amber); margin-top:.6mm; }
+  .hero .meta{ font-size:7.8pt; color:#9AA3B2; margin-top:.6mm; }
   .rule{ height:4px; background:var(--amber); }
 
-  .cols{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8mm; padding:6mm 14mm 0; }
-  .col h2.sec{ font-size:13pt; margin:0 0 3mm; color:var(--hero); }
-  .col h2.sec::after{ content:''; display:block; width:12mm; height:3px; background:var(--amber); border-radius:2px; margin-top:1.6mm; }
+  .main{ padding:4.5mm 16mm 0; }
+  h2.sec{ font-size:12pt; margin:0 0 2.5mm; color:var(--hero); display:flex; align-items:center; gap:3mm; }
+  h2.sec::after{ content:''; flex:1; height:2px; background:var(--line); }
+  h2.sec.gap{ margin-top:1mm; }
 
-  p{ margin:0 0 2mm; }
+  p{ margin:0 0 1.6mm; }
   strong{ font-weight:600; }
   a{ color:var(--blue); font-weight:600; text-decoration:none; }
   .ui{ font-weight:600; background:var(--amber-soft); padding:0 3px; border-radius:3px; white-space:nowrap; }
 
-  .step{ display:flex; gap:3.5mm; margin:0 0 4.5mm; }
-  .num{ flex:0 0 8mm; height:8mm; border-radius:50%; background:var(--amber); color:#fff; font-size:11.5pt; font-weight:700;
-    display:flex; align-items:center; justify-content:center; }
-  .body{ flex:1; min-width:0; }
-  .body h3{ font-size:11pt; margin:1mm 0 1.6mm; color:var(--hero); }
+  /* one step = number rail | text | picture; the rail line joins the steps top to bottom */
+  .step{ display:grid; grid-template-columns:9mm 1fr 76mm; column-gap:4mm; position:relative; padding-bottom:4mm; }
+  .step .rail{ position:relative; }
+  .step .rail::after{ content:''; position:absolute; left:50%; top:9mm; bottom:-1mm; width:2px; margin-left:-1px; background:#F0D9A8; }
+  .step.last .rail::after{ display:none; }
+  .num{ width:8mm; height:8mm; border-radius:50%; background:var(--amber); color:#fff; font-size:11pt; font-weight:700;
+    display:flex; align-items:center; justify-content:center; position:relative; z-index:1; }
+  .step h3{ font-size:10.6pt; margin:.8mm 0 1.4mm; color:var(--hero); }
+  .pic{ align-self:start; }
 
-  .linkbox{ display:block; padding:3mm 4mm; border:2px solid var(--amber); border-radius:7px; background:var(--amber-soft); }
-  .linkbox .lbl{ font-size:7pt; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:#9A6200; }
-  .linkbox a{ display:block; font-size:11.5pt; margin-top:.8mm; }
+  .linkbox{ display:block; padding:2.6mm 3.5mm; border:2px solid var(--amber); border-radius:7px; background:var(--amber-soft); }
+  .linkbox .lbl{ font-size:6.8pt; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:#9A6200; }
+  .linkbox a{ display:block; font-size:11pt; margin-top:.6mm; }
+  .cap{ font-size:7.5pt; color:var(--soft); margin:1mm 0 0; }
 
-  .mock{ border:1px solid #C9D1DB; border-radius:5px; overflow:hidden; margin:2mm 0 1mm; font-size:8.2pt; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.07); }
-  .mock .bar{ background:#F3F4F6; border-bottom:1px solid #DDE1E6; padding:1.2mm 2.5mm; color:var(--soft); font-size:7.4pt; }
+  .mock{ border:1px solid #C9D1DB; border-radius:5px; overflow:hidden; font-size:7.8pt; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  .mock .bar{ background:#F3F4F6; border-bottom:1px solid #DDE1E6; padding:1mm 2.5mm; color:var(--soft); font-size:7pt; }
   .mock .bar b{ color:var(--ink); font-weight:600; }
-  .mock .in{ padding:2mm 2.5mm; }
-  .gh-title{ font-size:10pt; font-weight:600; margin:0 0 1mm; }
-  .tag-latest{ display:inline-block; border:1px solid #2DA44E; color:#1A7F37; border-radius:2em; font-size:6.6pt; padding:0 5px; margin-left:1.5mm; vertical-align:1px; }
+  .mock .in{ padding:1.8mm 2.5mm; }
+  .gh-title{ font-size:9.4pt; font-weight:600; margin:0 0 .8mm; }
+  .tag-latest{ display:inline-block; border:1px solid #2DA44E; color:#1A7F37; border-radius:2em; font-size:6.4pt; padding:0 5px; margin-left:1.5mm; vertical-align:1px; }
   .assets{ border:1px solid #D0D7DE; border-radius:5px; }
-  .assets div{ padding:1mm 2.2mm; border-top:1px solid #D0D7DE; display:flex; justify-content:space-between; gap:2mm; color:var(--blue); }
+  .assets div{ padding:.8mm 2.2mm; border-top:1px solid #D0D7DE; display:flex; justify-content:space-between; gap:2mm; color:var(--blue); }
   .assets div:first-child{ border-top:0; color:var(--ink); font-weight:600; background:#F6F8FA; }
   .assets .pick{ background:#FFF8C5; outline:2px solid var(--amber); outline-offset:-2px; font-weight:700; }
   .assets span{ color:var(--soft); font-weight:400; white-space:nowrap; }
   .hand{ color:var(--amber); font-weight:700; }
-  .cap{ font-size:7.6pt; color:var(--soft); margin:0; }
 
-  .ss{ background:#0F4C9C; color:#fff; padding:2.5mm 3.5mm; }
-  .ss h4{ margin:0 0 1mm; font-size:10.5pt; font-weight:400; }
-  .ss p{ font-size:7.6pt; opacity:.92; margin:0 0 1.4mm; }
+  .ss{ background:#0F4C9C; color:#fff; padding:2.2mm 3mm; }
+  .ss h4{ margin:0 0 .8mm; font-size:10pt; font-weight:400; }
+  .ss p{ font-size:7.2pt; opacity:.92; margin:0 0 1.2mm; }
   .ss .row{ display:flex; justify-content:flex-end; align-items:center; gap:2.5mm; }
-  .btn{ display:inline-block; border:1px solid #fff; padding:.6mm 3mm; border-radius:3px; font-size:7.8pt; }
+  .btn{ display:inline-block; border:1px solid #fff; padding:.5mm 3mm; border-radius:3px; font-size:7.4pt; }
   .btn.hl{ background:#fff; color:#0F4C9C; font-weight:700; outline:2px solid var(--amber); outline-offset:1.5px; }
   .lnk{ text-decoration:underline; outline:2px solid var(--amber); outline-offset:1.5px; }
   .y{ color:#FFD27A; font-weight:700; }
 
   .dlg .in{ display:flex; gap:2.5mm; }
-  .dlg .ico{ flex:0 0 6.5mm; height:6.5mm; border-radius:50%; background:var(--blue); color:#fff; font-weight:700;
-    display:flex; align-items:center; justify-content:center; font-size:8pt; }
-  .dlg .foot{ background:#F3F4F6; padding:1.6mm 2.5mm; display:flex; justify-content:flex-end; gap:2.5mm; border-top:1px solid #E1E4E8; }
-  .wbtn{ border:1px solid #ADB5BD; background:#fff; padding:.5mm 4mm; border-radius:3px; font-size:7.8pt; }
+  .dlg .ico{ flex:0 0 6mm; height:6mm; border-radius:50%; background:var(--blue); color:#fff; font-weight:700;
+    display:flex; align-items:center; justify-content:center; font-size:7.6pt; }
+  .dlg .foot{ background:#F3F4F6; padding:1.4mm 2.5mm; display:flex; justify-content:flex-end; gap:2.5mm; border-top:1px solid #E1E4E8; }
+  .wbtn{ border:1px solid #ADB5BD; background:#fff; padding:.4mm 4mm; border-radius:3px; font-size:7.4pt; }
   .wbtn.def{ border:2px solid var(--blue); font-weight:600; }
 
-  .menu{ max-width:62mm; }
-  .menu .top{ display:flex; gap:4mm; background:#F3F4F6; padding:1mm 2.5mm; border-bottom:1px solid #DDE1E6; font-size:7.8pt; }
+  .menu .top{ display:flex; gap:4mm; background:#F3F4F6; padding:1mm 2.5mm; border-bottom:1px solid #DDE1E6; font-size:7.6pt; }
   .menu .top .on{ background:#DCE3EA; padding:0 1.5mm; border-radius:2px; }
-  .menu .items div{ padding:1.1mm 3mm; font-size:8pt; }
+  .menu .items div{ padding:1mm 3mm; font-size:7.8pt; }
   .menu .items .hl{ background:var(--amber-soft); font-weight:600; }
   .menu .items .dim{ color:#98A2B3; }
 
-  ul.b{ margin:1.5mm 0 0; padding-left:4.2mm; } ul.b li{ margin-bottom:1mm; }
-  .note{ background:#F6F8FB; border-left:3px solid var(--teal); padding:2.2mm 3.2mm; margin:0 0 3mm; border-radius:0 3px 3px 0; font-size:8.8pt; }
+  ul.b{ margin:0; padding-left:4.2mm; } ul.b li{ margin-bottom:.8mm; }
+  .notes{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:1mm; }
+  .note{ background:#F6F8FB; border-left:3px solid var(--teal); padding:2mm 3mm; border-radius:0 3px 3px 0; font-size:8.4pt; }
   .note.warn{ background:var(--amber-soft); border-left-color:var(--amber); }
-  .note b.l{ display:block; font-size:6.8pt; letter-spacing:.8px; text-transform:uppercase; color:var(--teal); margin-bottom:.6mm; }
+  .note b.l{ display:block; font-size:6.6pt; letter-spacing:.8px; text-transform:uppercase; color:var(--teal); margin-bottom:.5mm; }
   .note.warn b.l{ color:#9A6200; }
   .note p{ margin:0; }
 </style>
@@ -97,95 +102,101 @@
   </div>
   <div class="rule"></div>
 
-  <div class="cols">
-    <!-- LEFT: install -->
-    <div class="col">
-      <h2 class="sec">Install</h2>
+  <div class="main">
+    <h2 class="sec">Install</h2>
 
-      <div class="step">
-        <div class="num">1</div>
-        <div class="body">
-          <h3>Click the link to download</h3>
-          <div class="linkbox">
-            <span class="lbl">Download link — click here</span>
-            <a href="https://github.com/NurulAqilahSaifulBahril/Engineering/releases/latest">Engineering — Electrical &amp; O&amp;M Portal</a>
-          </div>
-          <p class="cap" style="margin-top:1.2mm">It always opens the newest version on GitHub — keep this guide and use the same link every time.</p>
-        </div>
+    <div class="step">
+      <div class="rail"><div class="num">1</div></div>
+      <div>
+        <h3>Click the link to download</h3>
+        <p>It always opens the <strong>newest version</strong> on GitHub — keep this guide and use the same link every time.</p>
       </div>
-
-      <div class="step">
-        <div class="num">2</div>
-        <div class="body">
-          <h3>On GitHub, download the Setup file</h3>
-          <p>Under <strong>Assets</strong>, click <strong>Eternalgy-OM-Dashboard-Setup-x.x.x.exe</strong>. Ignore the other files.</p>
-          <div class="mock">
-            <div class="bar">🔒 <b>github.com</b>/…/Engineering/releases/latest</div>
-            <div class="in">
-              <div class="gh-title">x.x.x <span class="tag-latest">Latest</span></div>
-              <div class="assets">
-                <div>▾ Assets <span>4</span></div>
-                <div class="pick">📦 Eternalgy-OM-Dashboard-Setup-x.x.x.exe <span class="hand">◀ click</span></div>
-                <div>…Setup-x.x.x.exe.blockmap <span>skip</span></div>
-                <div>…User-Guide.pdf <span>this guide</span></div>
-                <div>latest.yml <span>skip</span></div>
-              </div>
-            </div>
-          </div>
-          <p class="cap"><strong>x.x.x</strong> is the version number and changes with each release — just take the Setup .exe on the page the link opens.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="num">3</div>
-        <div class="body">
-          <h3>Install it</h3>
-          <p>Open the downloaded file. If Windows shows <em>“Windows protected your PC”</em>, click <span class="ui">More info</span> then <span class="ui">Run anyway</span> — the app is safe, just new to Windows.</p>
-          <div class="mock">
-            <div class="ss">
-              <h4>Windows protected your PC</h4>
-              <p>Microsoft Defender SmartScreen prevented an unrecognised app from starting.</p>
-              <p><span class="lnk">More info</span> <span class="y">◀ 1st</span></p>
-              <div class="row"><span class="btn hl">Run anyway</span><span class="y">◀ 2nd</span><span class="btn">Don't run</span></div>
-            </div>
-          </div>
-          <p style="margin-top:2mm">Then <span class="ui">Next</span> → <span class="ui">Install</span> → <span class="ui">Finish</span>. The app opens and an <strong>Eternalgy O&amp;M Dashboard</strong> shortcut is added to your desktop and Start menu. Nothing else to set up — it is already connected to NUrul_DB and shared with your team.</p>
+      <div class="pic">
+        <div class="linkbox">
+          <span class="lbl">Download link — click here</span>
+          <a href="https://github.com/NurulAqilahSaifulBahril/Engineering/releases/latest">Engineering — Electrical &amp; O&amp;M Portal</a>
         </div>
       </div>
     </div>
 
-    <!-- RIGHT: updates -->
-    <div class="col">
-      <h2 class="sec">How updates work</h2>
-
-      <div class="step">
-        <div class="num">A</div>
-        <div class="body">
-          <h3>When the “Update ready” box appears</h3>
-          <div class="mock dlg">
-            <div class="bar"><b>Update ready</b></div>
-            <div class="in"><div class="ico">i</div><div><strong>Version x.x.x has been downloaded.</strong><br><span style="color:var(--soft)">Restart now to install it, or it will install the next time you close the app.</span></div></div>
-            <div class="foot"><span class="wbtn def">Restart now</span><span class="wbtn">Later</span></div>
-          </div>
-          <ul class="b">
-            <li><span class="ui">Restart now</span> — save what you are typing first. The app closes, installs and reopens (about a minute).</li>
-            <li><span class="ui">Later</span> — keep working. It installs by itself next time you close the app.</li>
-          </ul>
-        </div>
+    <div class="step">
+      <div class="rail"><div class="num">2</div></div>
+      <div>
+        <h3>On GitHub, download the Setup file</h3>
+        <p>Under <strong>Assets</strong>, click <strong>Eternalgy-OM-Dashboard-Setup-x.x.x.exe</strong>. Ignore the other files.</p>
+        <p class="cap"><strong>x.x.x</strong> is the version number and changes with each release — just take the Setup .exe on the page the link opens.</p>
       </div>
-
-      <div class="step">
-        <div class="num">B</div>
-        <div class="body">
-          <h3>Check for an update yourself</h3>
-          <p>Click <span class="ui">Help → Check for Updates…</span>. A new version downloads and the box above appears; otherwise you see <em>“You're on the latest version”</em>. The last line of <strong>Help</strong> shows your version.</p>
-          <div class="mock menu">
-            <div class="top"><span>File</span><span>Edit</span><span>View</span><span class="on">Help</span></div>
-            <div class="items"><div class="hl">Check for Updates…</div><div class="dim">Version x.x.x</div></div>
+      <div class="pic">
+        <div class="mock">
+          <div class="bar">🔒 <b>github.com</b>/…/Engineering/releases/latest</div>
+          <div class="in">
+            <div class="gh-title">x.x.x <span class="tag-latest">Latest</span></div>
+            <div class="assets">
+              <div>▾ Assets <span>4</span></div>
+              <div class="pick">📦 …Dashboard-Setup-x.x.x.exe <span class="hand">◀ click</span></div>
+              <div>…Setup-x.x.x.exe.blockmap <span>skip</span></div>
+              <div>…User-Guide.pdf <span>this guide</span></div>
+              <div>latest.yml <span>skip</span></div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
+    <div class="step">
+      <div class="rail"><div class="num">3</div></div>
+      <div>
+        <h3>Install it</h3>
+        <p>Open the downloaded file. If Windows shows <em>“Windows protected your PC”</em>, click <span class="ui">More info</span> then <span class="ui">Run anyway</span> — the app is safe, just new to Windows.</p>
+        <p>Then <span class="ui">Next</span> → <span class="ui">Install</span> → <span class="ui">Finish</span>. The app opens and an <strong>Eternalgy O&amp;M Dashboard</strong> shortcut is added to your desktop and Start menu. Nothing else to set up — it is already connected to NUrul_DB and shared with your team.</p>
+      </div>
+      <div class="pic">
+        <div class="mock">
+          <div class="ss">
+            <h4>Windows protected your PC</h4>
+            <p>Microsoft Defender SmartScreen prevented an unrecognised app from starting.</p>
+            <p><span class="lnk">More info</span> <span class="y">◀ 1st</span></p>
+            <div class="row"><span class="btn hl">Run anyway</span><span class="y">◀ 2nd</span><span class="btn">Don't run</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec gap">How updates work</h2>
+
+    <div class="step">
+      <div class="rail"><div class="num">A</div></div>
+      <div>
+        <h3>When the “Update ready” box appears</h3>
+        <ul class="b">
+          <li><span class="ui">Restart now</span> — save what you are typing first. The app closes, installs and reopens (about a minute).</li>
+          <li><span class="ui">Later</span> — keep working. It installs by itself the next time you close the app.</li>
+        </ul>
+      </div>
+      <div class="pic">
+        <div class="mock dlg">
+          <div class="bar"><b>Update ready</b></div>
+          <div class="in"><div class="ico">i</div><div><strong>Version x.x.x has been downloaded.</strong><br><span style="color:var(--soft)">Restart now to install it, or it will install the next time you close the app.</span></div></div>
+          <div class="foot"><span class="wbtn def">Restart now</span><span class="wbtn">Later</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step last">
+      <div class="rail"><div class="num">B</div></div>
+      <div>
+        <h3>Check for an update yourself</h3>
+        <p>Click <span class="ui">Help → Check for Updates…</span>. A new version downloads and the box above appears; otherwise you see <em>“You're on the latest version”</em>. The last line of <strong>Help</strong> shows your version.</p>
+      </div>
+      <div class="pic">
+        <div class="mock menu">
+          <div class="top"><span>File</span><span>Edit</span><span>View</span><span class="on">Help</span></div>
+          <div class="items"><div class="hl">Check for Updates…</div><div class="dim">Version x.x.x</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
       <div class="note warn">
         <b class="l">Good to know</b>
         <p>Updates need the internet; if the app was offline, it checks again next time. Never uninstall to update — let the app update itself, or run the newest Setup file from the link over the top.</p>
