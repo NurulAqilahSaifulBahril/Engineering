@@ -1,11 +1,27 @@
-# Operation & Maintenance Dashboard
+# Eternalgy O&M Dashboard
 
-Generates O&M reports from bill and solar figures (key them in, or load a sample), with print / save as PDF.
+Generates Operation & Maintenance reports from bill and solar figures (key them in, or load a sample), with print / save as PDF.
 
-## Run locally
+## Install
+
+Download `Eternalgy-OM-Dashboard-Setup-<version>.exe` from [Releases](https://github.com/NurulAqilahSaifulBahril/Engineering/releases/latest) and run it. The installed app checks for updates on launch (or Help → Check for Updates).
+
+## Develop
 
 ```powershell
-$env:PORT=4425; node server.js
+npm install
+npm start          # run as a desktop app
+npm run web        # or serve in the browser on http://localhost:5174 (set $env:PORT to change)
+npm run dist       # build the installer into dist/
 ```
 
-Then open http://localhost:4425. Without `PORT` it listens on 5174.
+## Release
+
+Bump `version` in `package.json`, commit, then tag and push:
+
+```powershell
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+The **Release installer** GitHub Action builds the Windows installer and publishes it as a GitHub Release.

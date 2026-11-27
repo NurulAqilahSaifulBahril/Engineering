@@ -1,0 +1,65 @@
+{
+  "name": "eternalgy-om-dashboard",
+  "productName": "Eternalgy O&M Dashboard",
+  "version": "1.0.0",
+  "description": "Operation & Maintenance report generator: key in bill and solar figures, get a printable O&M report.",
+  "main": "main.js",
+  "author": "Eternalgy",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "web": "node server.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish never"
+  },
+  "build": {
+    "appId": "my.eternalgy.omdashboard",
+    "productName": "Eternalgy O&M Dashboard",
+    "copyright": "Copyright © Eternalgy",
+    "files": [
+      "main.js",
+      "index.html",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Eternalgy-OM-Dashboard-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Eternalgy O&M Dashboard"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "NurulAqilahSaifulBahril",
+        "repo": "Engineering",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

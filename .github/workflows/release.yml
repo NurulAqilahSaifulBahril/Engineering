@@ -1,0 +1,45 @@
+name: Release installer
+
+# Runs when a v* tag is pushed, or by hand from the Actions tab for an existing tag.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and release (e.g. v1.0.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build installer (no publish)
+        run: npx electron-builder --publish never
+        env:
+          npm_config_loglevel: warn
+
+      - name: Create release and upload installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES="dist/Eternalgy-OM-Dashboard-Setup-*.exe dist/Eternalgy-OM-Dashboard-Setup-*.exe.blockmap dist/latest.yml"
+          gh release create "$TAG" $FILES --title "${TAG#v}" --generate-notes --verify-tag || \
+          gh release upload "$TAG" $FILES --clobber
