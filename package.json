@@ -1,7 +1,7 @@
 {
   "name": "eternalgy-om-dashboard",
   "productName": "Eternalgy O&M Dashboard",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Operation & Maintenance report generator: key in bill and solar figures, get a printable O&M report.",
   "main": "main.js",
   "author": "Eternalgy",
