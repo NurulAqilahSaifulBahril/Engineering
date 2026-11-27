@@ -2,7 +2,7 @@
 
 The Engineering department's desktop app for operation & maintenance and engineering records: site issues and technician visits, rectification and solar saving reports, drawings, load profile jobs, O&M manuals, T&C reports, and summary exports.
 
-**User guide:** [docs/Eternalgy-OM-Dashboard-User-Guide.pdf](docs/Eternalgy-OM-Dashboard-User-Guide.pdf) (also attached to each release).
+**Install & update guide (3 pages):** [docs/Eternalgy-OM-Dashboard-User-Guide.pdf](docs/Eternalgy-OM-Dashboard-User-Guide.pdf), also attached to each release. **Full manual** (every screen): [docs/Eternalgy-OM-Dashboard-Full-Manual.pdf](docs/Eternalgy-OM-Dashboard-Full-Manual.pdf).
 
 ## Install
 
@@ -25,7 +25,7 @@ npm install
 npm start          # run as a desktop app
 npm run web        # or serve in the browser on http://localhost:5174 (set $env:PORT to change)
 npm run dist       # build the installer into dist/
-npm run guide      # rebuild the user guide PDF from docs/guide.src.html
+npm run guide      # rebuild both PDFs: guide.src.html (install & update) and manual.src.html (full manual)
 ```
 
 `index.html` is the whole dashboard and also runs inside Claude. In the desktop app, `om-shim.js` (added to the page by `main.js`) stands in for the Claude runtime's `db`, `user` and `assets` services and backs them with NUrul_DB.

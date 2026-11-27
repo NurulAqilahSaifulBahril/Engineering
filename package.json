@@ -14,7 +14,7 @@
     "dist": "electron-builder --publish never",
     "prepack": "node scripts/make-db-bundle.js",
     "predist": "node scripts/make-db-bundle.js",
-    "guide": "electron docs/build-guide.js docs/guide.src.html docs/Eternalgy-OM-Dashboard-User-Guide.pdf"
+    "guide": "electron docs/build-guide.js docs/guide.src.html docs/Eternalgy-OM-Dashboard-User-Guide.pdf && electron docs/build-guide.js docs/manual.src.html docs/Eternalgy-OM-Dashboard-Full-Manual.pdf"
   },
   "build": {
     "appId": "my.eternalgy.omdashboard",

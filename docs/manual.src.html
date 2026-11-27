@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eternalgy O&amp;M Dashboard — Full Manual</title>
+<style>
+  /* Source for docs/Eternalgy-OM-Dashboard-Full-Manual.pdf. Rebuild with: npm run guide */
+  @page { size: A4; margin: 16mm 18mm 17mm; }
+  @page cover { size: A4; margin: 0 0 17mm; }
+  .cover{ page: cover; }
+  .cover-body{ padding: 0 18mm; }
+
+  :root{
+    --ink:#1C2430; --ink-soft:#5A6675; --hero:#111318;
+    --amber:#D98E00; --amber-soft:#FFF4DE; --teal:#0F766E; --red:#B42318;
+    --line:#E3E8EF; --code-bg:#F1F3F6;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ font-family:"Segoe UI", system-ui, Helvetica, Arial, sans-serif; color:var(--ink);
+    font-size:10.5pt; line-height:1.5; -webkit-font-smoothing:antialiased; }
+
+  .hero{ background:var(--hero); color:#fff; padding:15mm 18mm 11mm; }
+  .hero-logo{ height:26px; display:block; margin-bottom:12mm; }
+  .hero h1{ font-size:30pt; line-height:1.06; font-weight:700; margin:0 0 2mm; letter-spacing:-.6px; }
+  .hero-sub{ font-size:21pt; font-weight:700; margin:0 0 5mm; color:var(--amber); letter-spacing:-.4px; }
+  .hero-meta{ font-size:10pt; color:#9AA3B2; margin:0; }
+  .hero-rule{ height:5px; background:var(--amber); }
+
+  p{ margin:0 0 3mm; }
+  strong{ font-weight:600; color:#131C27; }
+  code{ font-family:"Cascadia Mono",Consolas,monospace; font-size:9pt; background:var(--code-bg);
+    padding:1px 5px; border-radius:4px; white-space:nowrap; }
+  a{ color:var(--amber); font-weight:600; text-decoration:none; }
+  .ui{ font-weight:600; color:#131C27; background:var(--amber-soft); padding:0 4px; border-radius:3px; white-space:nowrap; }
+
+  .intro{ margin-top:9mm; }
+  .toc{ columns:2; column-gap:10mm; margin:4mm 0 0; padding:0; list-style:none; }
+  .toc li{ padding:1.6mm 0; border-bottom:1px solid var(--line); break-inside:avoid; }
+  .toc b{ color:var(--amber); margin-right:3mm; }
+
+  .part{ break-before:page; }
+  .pill{ display:inline-block; background:var(--amber); color:#fff; font-size:7.6pt; font-weight:700;
+    letter-spacing:1.1px; text-transform:uppercase; padding:2.4px 11px; border-radius:999px; margin-bottom:3mm; }
+  h2{ font-size:19pt; font-weight:700; margin:0 0 3mm; letter-spacing:-.3px; color:var(--hero); break-after:avoid; }
+  h2::after{ content:''; display:block; width:16mm; height:3px; background:var(--amber); border-radius:2px; margin-top:2.5mm; }
+  h3{ font-size:13pt; margin:7mm 0 3mm; color:var(--hero); break-after:avoid; }
+  h3 .n{ display:inline-block; min-width:9mm; margin-right:2mm; color:var(--amber); }
+
+  ol.steps{ list-style:none; margin:0 0 3mm; padding:0; counter-reset:s; }
+  ol.steps > li{ counter-increment:s; position:relative; padding-left:9mm; margin-bottom:2.2mm; break-inside:avoid; }
+  ol.steps > li::before{ content:counter(s); position:absolute; left:0; top:.4mm; width:5.6mm; height:5.6mm;
+    border-radius:2mm; background:var(--amber-soft); color:var(--amber); font-size:8pt; font-weight:700;
+    display:flex; align-items:center; justify-content:center; }
+  ul.b{ margin:0 0 3mm; padding-left:5mm; } ul.b li{ margin-bottom:1.4mm; }
+
+  figure{ margin:3mm 0 5mm; break-inside:avoid; }
+  figure img{ width:100%; display:block; border:1px solid var(--line); border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  figure.half img{ width:78%; margin:0 auto; }
+  figure.short img{ max-height:118mm; object-fit:cover; object-position:top; }
+  figcaption{ font-size:8.6pt; color:var(--ink-soft); margin-top:1.6mm; text-align:center; }
+
+  .note{ background:#F6F8FB; border-left:3px solid var(--teal); padding:3.2mm 4.5mm; margin:3.5mm 0;
+    border-radius:0 3px 3px 0; break-inside:avoid; }
+  .note.warn{ background:var(--amber-soft); border-left-color:var(--amber); }
+  .note p:last-child, .note ul:last-child{ margin-bottom:0; }
+  .note .label{ display:block; font-size:7.6pt; font-weight:700; letter-spacing:.9px; text-transform:uppercase;
+    color:var(--teal); margin-bottom:1mm; }
+  .note.warn .label{ color:#9A6200; }
+
+  table{ width:100%; border-collapse:collapse; margin:2mm 0 4mm; font-size:9.6pt; break-inside:avoid; }
+  th,td{ text-align:left; padding:1.8mm 2.6mm; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ background:#F4F6F9; font-size:8.4pt; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-soft); }
+  .tag{ display:inline-block; padding:0 7px; border-radius:9px; color:#fff; font-size:8.4pt; font-weight:600; }
+  .t-u{ background:var(--red); } .t-n{ background:var(--amber); } .t-l{ background:#64748B; } .t-c{ background:var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="hero">
+    <img class="hero-logo" src="logo-white.png" alt="Eternalgy">
+    <h1>Eternalgy O&amp;M Dashboard</h1>
+    <div class="hero-sub">Full Manual</div>
+    <p class="hero-meta">Desktop app version 1.2.0 &nbsp;·&nbsp; November 2026 &nbsp;·&nbsp; Engineering — Electrical and O&amp;M</p>
+  </div>
+  <div class="hero-rule"></div>
+  <div class="cover-body">
+    <div class="intro">
+      <p>The O&amp;M Dashboard is the Engineering department's working tool for <strong>operation &amp; maintenance</strong> and <strong>engineering records</strong>. In one app you can log site issues and track them to completion, schedule technician visits, produce rectification reports and solar saving reports for clients, record drawings, load profile jobs, O&amp;M manuals and testing &amp; commissioning (T&amp;C) reports, and export summaries for management.</p>
+      <p>This guide walks through each screen in the order you will use them. Screens are shown with sample data — the client names are made up.</p>
+    </div>
+    <ul class="toc">
+      <li><b>1</b>Install and update</li>
+      <li><b>2</b>Getting around</li>
+      <li><b>3</b>Site issues</li>
+      <li><b>4</b>Site visits and the calendar</li>
+      <li><b>5</b>Rectification reports</li>
+      <li><b>6</b>Solar saving reports</li>
+      <li><b>7</b>O&amp;M dashboard</li>
+      <li><b>8</b>Drawings</li>
+      <li><b>9</b>Load profile</li>
+      <li><b>10</b>O&amp;M manuals</li>
+      <li><b>11</b>Testing &amp; commissioning (T&amp;C)</li>
+      <li><b>12</b>Main dashboard and summaries</li>
+      <li><b>13</b>Good to know</li>
+    </ul>
+    <div class="note warn" style="margin-top:8mm">
+      <span class="label">Shared with your team</span>
+      <p>The app saves every record to the company database, <strong>NUrul_DB</strong>, so the whole team works on the same issues, reports and jobs (section 1.3). The screens say <em>“Shared with your team”</em>. If they ever say <em>“Saved on this device only”</em>, the app could not reach NUrul_DB — see section 13.1.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1 INSTALL ============ -->
+<section class="part">
+  <span class="pill">Part 1</span>
+  <h2>Install and update</h2>
+  <h3><span class="n">1.1</span>Install</h3>
+  <ol class="steps">
+    <li>Open the releases page: <a href="https://github.com/NurulAqilahSaifulBahril/Engineering/releases/latest">github.com/NurulAqilahSaifulBahril/Engineering/releases</a>.</li>
+    <li>Under <strong>Assets</strong>, download <code>Eternalgy-OM-Dashboard-Setup-&lt;version&gt;.exe</code> (about 80 MB). You only need the <code>.exe</code>; the other files are used by the updater.</li>
+    <li>Run the file. If Windows shows <em>“Windows protected your PC”</em>, click <span class="ui">More info</span> then <span class="ui">Run anyway</span> — the installer is not code-signed yet, so Windows does not recognise the publisher.</li>
+    <li>Choose where to install (the default is fine) and finish. The app is added to the Start menu and the desktop as <strong>Eternalgy O&amp;M Dashboard</strong>.</li>
+  </ol>
+  <h3><span class="n">1.2</span>Updates</h3>
+  <ul class="b">
+    <li>Each time the app opens it checks GitHub for a newer version and downloads it in the background.</li>
+    <li>When the download is ready you will see <em>“Update ready”</em>. Click <span class="ui">Restart now</span>, or <span class="ui">Later</span> to install it the next time you close the app. Save your work first — the app never restarts on its own.</li>
+    <li>To check yourself: <span class="ui">Help → Check for Updates…</span>. <span class="ui">Help</span> also shows the version you are on.</li>
+    <li>Updating keeps all your saved records and drafts.</li>
+  </ul>
+  <h3><span class="n">1.3</span>Shared data in NUrul_DB</h3>
+  <p>Shared records live in the company database, <strong>NUrul_DB</strong>. The app connects to it <strong>automatically</strong> — there is nothing to set up. The dashboards say <em>“Shared with your team”</em> and <span class="ui">File</span> shows <em>“NUrul_DB: connected (built in)”</em>.</p>
+  <ol class="steps">
+    <li>The first time you open the app, click <span class="ui">File → Your name…</span> and type your name. It is shown as <strong>Logged by</strong> on records you save (until you set it, the Windows login name is used).</li>
+  </ol>
+  <ul class="b">
+    <li>If your admin gives you a different connection file, load it with <span class="ui">File → Database Connection…</span>; <span class="ui">Disconnect from NUrul_DB</span> then returns to the built-in connection.</li>
+    <li>Colleagues' changes appear within about 15 seconds, and straight away when you switch back to the app.</li>
+    <li>Records saved on a PC <strong>before</strong> it was connected stay on that PC and are not shown while connected.</li>
+  </ul>
+  <h3><span class="n">1.4</span>Menu shortcuts</h3>
+  <table>
+    <tr><th style="width:38%">Menu</th><th>What it does</th></tr>
+    <tr><td><span class="ui">File → Print / Save as PDF…</span> &nbsp;<code>Ctrl+P</code></td><td>Prints the current screen. In the Windows print dialog choose <strong>Microsoft Print to PDF</strong> to save a PDF file.</td></tr>
+    <tr><td><span class="ui">View → Zoom In / Out / Reset</span> &nbsp;<code>Ctrl + = / − / 0</code></td><td>Makes everything larger or smaller — useful on small laptop screens.</td></tr>
+    <tr><td><span class="ui">View → Reload</span> &nbsp;<code>Ctrl+R</code></td><td>Redraws the screen if something looks stuck. Saved data is not lost; unsaved form entries may be.</td></tr>
+  </table>
+</section>
+
+<!-- ============ 2 GETTING AROUND ============ -->
+<section class="part">
+  <span class="pill">Part 2</span>
+  <h2>Getting around</h2>
+  <p>The dark sidebar on the left has three areas. Each area has its own row of tabs along the top.</p>
+  <table>
+    <tr><th style="width:22%">Sidebar</th><th>Tabs</th></tr>
+    <tr><td><strong>Dashboard</strong></td><td>One page: counts for every tab, an export summary and PIC work done (section 12).</td></tr>
+    <tr><td><strong>Engineering</strong></td><td>Dashboard · Submission Drawing · Installation Drawing · Load Profile · O&amp;M Manual · T&amp;C</td></tr>
+    <tr><td><strong>O&amp;M</strong></td><td>Dashboard · Site Issue · Saving Report · Analysis Report <em>(coming soon)</em> · Rectification Report · Calendar</td></tr>
+  </table>
+  <figure>
+    <img src="img/dashboard.png" alt="Main dashboard">
+    <figcaption>The main Dashboard: one card per tab, then the export summary below.</figcaption>
+  </figure>
+  <h3><span class="n">2.1</span>How reports work</h3>
+  <p>Reports (saving, rectification, O&amp;M manual, T&amp;C) share the same layout: <strong>details on the left</strong>, a <strong>live preview of the finished report on the right</strong>. The preview updates as you type. Three buttons sit above the preview:</p>
+  <table>
+    <tr><th style="width:26%">Button</th><th>What it does</th></tr>
+    <tr><td><span class="ui">Submit report</span></td><td>Saves it as final. It is counted on the dashboards and the <em>“DRAFT – not submitted”</em> badge disappears from the report.</td></tr>
+    <tr><td><span class="ui">Save draft</span></td><td>Keeps your work to finish later. Drafts are listed on the O&amp;M Dashboard under <strong>Drafts (not submitted)</strong> and are not counted as produced.</td></tr>
+    <tr><td><span class="ui">Print / Save as PDF</span></td><td>Prints only the report (the input panel and menus are hidden). Choose <strong>Microsoft Print to PDF</strong> to send it to a client.</td></tr>
+  </table>
+  <div class="note"><span class="label">Tip</span><p>Submit before you print, so the PDF does not carry the orange <em>DRAFT</em> badge.</p></div>
+</section>
+
+<!-- ============ 3 SITE ISSUES ============ -->
+<section class="part">
+  <span class="pill">Part 3 · O&amp;M</span>
+  <h2>Site issues</h2>
+  <p><span class="ui">O&amp;M → Site Issue</span> is the ticket list for every problem reported by a client or spotted on monitoring. Each ticket gets a number such as <code>SI-261127-140923</code> (date and time logged).</p>
+  <h3><span class="n">3.1</span>Log a new issue</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">+ Log issue</span>.</li>
+    <li>Choose the <strong>Source</strong>: <em>Client reported</em> or <em>Monitoring</em>.</li>
+    <li>Fill in the client / site name, contact, address, system size, inverter size and model, and agent.</li>
+    <li>Pick the <strong>Issue type</strong> and describe what the client reports or what was found.</li>
+    <li>Tick <strong>System fully down</strong> or <strong>Safety risk</strong> if they apply, and add up to 3 pictures.</li>
+    <li>For an <strong>old (backlog) issue</strong>, set the earlier date it was reported and its current status, and use the note to say how it was solved.</li>
+    <li>Click <span class="ui">Submit issue</span>.</li>
+  </ol>
+  <figure class="half">
+    <img src="img/issue-form.png" alt="Log site issue form">
+    <figcaption>The Log site issue form. Urgency is shown before you submit.</figcaption>
+  </figure>
+  <h3><span class="n">3.2</span>Urgency is set automatically</h3>
+  <table>
+    <tr><th style="width:22%">Urgency</th><th>When</th></tr>
+    <tr><td><span class="tag t-u">Urgent</span></td><td>No generation · Inverter fault · Leakage / safety / damage — or <strong>any</strong> issue with <em>System fully down</em> or <em>Safety risk</em> ticked</td></tr>
+    <tr><td><span class="tag t-n">Normal</span></td><td>Tripping · Low generation</td></tr>
+    <tr><td><span class="tag t-l">Low</span></td><td>Monitoring / app · Billing / TNB · Other</td></tr>
+  </table>
+  <h3><span class="n">3.3</span>Find and follow up tickets</h3>
+  <ul class="b">
+    <li>The cards at the top count <strong>Open</strong>, <strong>On monitoring</strong>, <strong>Completed</strong> and <strong>Urgent (not completed)</strong> tickets.</li>
+    <li>Filter the list with the status buttons (All / Open / On monitoring / Completed / Urgent) and the issue-type buttons, or search by client, ticket number or type.</li>
+    <li>Click a ticket to open its detail.</li>
+  </ul>
+  <figure>
+    <img src="img/issue-detail.png" alt="Ticket detail">
+    <figcaption>Ticket detail: status, aging, site visit, and the actions you can take.</figcaption>
+  </figure>
+  <p>In the ticket detail you can:</p>
+  <ul class="b">
+    <li><strong>Update the status</strong> — <span class="tag t-u">Open</span> → <span class="tag t-n">On monitoring</span> → <span class="tag t-c">Completed</span>. Set the rectification date, add an optional note, then <span class="ui">Save update</span>. <strong>Aging</strong> counts the days from logging to completion.</li>
+    <li><span class="ui">Arrange visit</span> — schedule a technician (section 4).</li>
+    <li><span class="ui">Create rectification report</span> — starts a report already filled with this ticket's details (section 5).</li>
+    <li><span class="ui">Reopen with a new issue</span> — appears on completed tickets when the problem comes back.</li>
+    <li><strong>Edit details</strong> — correct the address, system size, agent or inverter model.</li>
+    <li><strong>Activity</strong> — a history of everything done on the ticket.</li>
+  </ul>
+  <h3><span class="n">3.4</span>Site issue summary</h3>
+  <p>The <strong>Site issue summary</strong> card counts issues reported, still open, rectified and average days to rectify, broken down by issue type. Choose <em>Weekly / Monthly / Yearly</em> and a date, then <span class="ui">Download CSV</span> or <span class="ui">Print / Save as PDF</span>.</p>
+  <div class="note warn"><span class="label">Not available in the desktop app</span><p><span class="ui">Import issues</span> (“Read with Claude”) only works when the dashboard is opened inside Claude. In the desktop app it shows <em>“Reading is not available here”</em> — log issues with <span class="ui">+ Log issue</span> instead.</p></div>
+</section>
+
+<!-- ============ 4 VISITS & CALENDAR ============ -->
+<section class="part">
+  <span class="pill">Part 4 · O&amp;M</span>
+  <h2>Site visits and the calendar</h2>
+  <h3><span class="n">4.1</span>Arrange a visit</h3>
+  <ol class="steps">
+    <li>Open the ticket and click <span class="ui">Arrange visit</span>.</li>
+    <li>Enter the visit date, time (optional), technician, proposed action, any spare part needed and a note.</li>
+    <li>Click <span class="ui">Save visit</span>. The visit appears on the ticket, in its Activity history and on the calendar. <span class="ui">Remove visit</span> cancels it.</li>
+  </ol>
+  <figure class="half">
+    <img src="img/visit-form.png" alt="Arrange site visit">
+    <figcaption>Arrange site visit.</figcaption>
+  </figure>
+  <h3><span class="n">4.2</span>Calendar</h3>
+  <p><span class="ui">O&amp;M → Calendar</span> shows every technician visit for the month. Move between months with <span class="ui">‹</span> <span class="ui">›</span>, jump back with <span class="ui">Today</span>, and pick one person in <strong>Technician</strong> to see only their visits.</p>
+  <ul class="b">
+    <li><strong>Amber</strong> = scheduled, <strong style="color:var(--red)">red</strong> = overdue, <strong style="color:var(--teal)">green</strong> = completed. Click a visit to open its ticket.</li>
+    <li><strong>Not yet scheduled</strong> (below the calendar) lists open issues that have no visit yet — work through this list so nothing is missed.</li>
+    <li><span class="ui">Daily report</span> (or <strong>Report</strong> on a day) gives a printable list of that day's visits for the technicians.</li>
+  </ul>
+  <figure class="short">
+    <img src="img/calendar.png" alt="Calendar">
+    <figcaption>Calendar with a scheduled visit (amber).</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 5 RECTIFICATION ============ -->
+<section class="part">
+  <span class="pill">Part 5 · O&amp;M</span>
+  <h2>Rectification reports</h2>
+  <p>A <strong>Site Issue Rectification Report</strong> records what was found on site and what was done, with before and after pictures and signature lines for the technician and the customer. Each report gets a number such as <code>SIR-261127-1404</code>.</p>
+  <ol class="steps">
+    <li>Best way: open the ticket and click <span class="ui">Create rectification report</span> — the client, address and issue are filled in for you. You can also start one from <span class="ui">O&amp;M → Rectification Report</span> or <span class="ui">+ Rectification report</span> on the O&amp;M Dashboard.</li>
+    <li>Fill in who attended, the dates (reported, attended, completed) and the status.</li>
+    <li>Describe the <strong>issue finding at site</strong> and the <strong>rectification work done</strong>.</li>
+    <li>Add <strong>before</strong> and <strong>after</strong> pictures.</li>
+    <li><span class="ui">Submit report</span>, then <span class="ui">Print / Save as PDF</span> for the customer to sign. <span class="ui">New / clear</span> starts a fresh report.</li>
+  </ol>
+  <figure>
+    <img src="img/rectification.png" alt="Rectification report">
+    <figcaption>Rectification report: details on the left, printable report on the right.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 6 SAVING REPORT ============ -->
+<section class="part">
+  <span class="pill">Part 6 · O&amp;M</span>
+  <h2>Solar saving reports</h2>
+  <p><span class="ui">O&amp;M → Saving Report</span> turns a client's TNB bill and solar figures into a <strong>Solar Saving Analysis Report</strong>: bill without solar, bill with solar under ATAP and/or NEM, monthly and yearly saving, system performance and a full bill breakdown.</p>
+  <figure>
+    <img src="img/saving.png" alt="Saving report">
+    <figcaption>Saving report with the ToU sample loaded.</figcaption>
+  </figure>
+  <h3><span class="n">6.1</span>Make a report</h3>
+  <ol class="steps">
+    <li>Enter the <strong>PIC</strong> (who prepared it — remembered for next time).</li>
+    <li>Choose the <strong>Tariff type</strong> to match the bill: <em>ToU (Peak / Off-Peak)</em> or <em>Standard (non-ToU)</em>. The bill and export boxes change to match.</li>
+    <li>Choose the <strong>Scheme to show</strong>: <em>ATAP and NEM (compare)</em>, <em>ATAP only</em> or <em>NEM only</em>.</li>
+    <li><strong>Client</strong>: company, client name, site address, bill month.</li>
+    <li><strong>System</strong>: system size (kWp), inverter capacity (kW), billing period (days) and, optionally, system cost — which adds a payback estimate.</li>
+    <li><strong>TNB bill</strong>: import (peak and off-peak, or total), AFA, and green tariff kWh if any. Optionally key in the <em>actual TNB current charge</em>; the app then shows how close its calculation is to the real bill.</li>
+    <li><strong>Solar</strong>: total solar generation and export (kWh (E) on the bill), plus NEM carried-forward credit or ATAP limit if they apply.</li>
+    <li>Attach the TNB bill and the solar generation record (PDF or picture). They are added to the end of the report as supporting documents.</li>
+    <li>Check the report on the right, then <span class="ui">Submit report</span> and <span class="ui">Print / Save as PDF</span>.</li>
+  </ol>
+  <div class="note"><span class="label">Try it first</span><p><span class="ui">Sample: ToU</span> and <span class="ui">Sample: Non-ToU</span> fill in a complete example. <span class="ui">Clear</span> empties the form.</p></div>
+  <h3><span class="n">6.2</span>Checks the app does for you</h3>
+  <ul class="b">
+    <li><em>“Export is higher than total solar generation”</em> — one of the two figures is wrong.</li>
+    <li><em>“Export is the same as the Baki balance”</em> — you probably typed the <strong>Baki</strong> (balance) into export. Export should be the <strong>kWh (E)</strong> meter reading.</li>
+  </ul>
+  <h3><span class="n">6.3</span>Tariff rates</h3>
+  <p>TNB rates (energy, capacity, network, retail charge, the 800 kWh split, etc.) are <strong>pre-filled</strong> under <em>Tariff rates (pre-filled)</em> following TNB domestic rules from 1 Sep 2026. Only change them if TNB revises its tariff.</p>
+  <div class="note warn"><span class="label">Not available in the desktop app</span><p>The <span class="ui">Auto-fill</span> buttons that read figures from the uploaded bill need Claude. In the desktop app they show <em>“Auto-read is not available in this view”</em> — key the figures in by hand. The uploaded pictures still appear in the report.</p></div>
+</section>
+
+<!-- ============ 7 O&M DASHBOARD ============ -->
+<section class="part">
+  <span class="pill">Part 7 · O&amp;M</span>
+  <h2>O&amp;M dashboard</h2>
+  <p><span class="ui">O&amp;M → Dashboard</span> is the overview for the O&amp;M team:</p>
+  <ul class="b">
+    <li><span class="ui">+ Saving report</span> and <span class="ui">+ Rectification report</span> start a new report.</li>
+    <li><strong>Drafts (not submitted)</strong> — open one to carry on where you left off.</li>
+    <li><strong>Site issues</strong> — open, on monitoring, completed and urgent counts.</li>
+    <li><strong>Saving reports</strong> — number produced, this month, total and average saving shown, a 6-month chart, and a searchable list of every report (search by client or address). Click <span class="ui">Open</span> to reopen a report or <span class="ui">Delete</span> to remove it.</li>
+    <li><strong>Site issue rectification reports</strong> — counts by status and the list of reports.</li>
+  </ul>
+  <figure>
+    <img src="img/om-dashboard.png" alt="O&amp;M dashboard">
+    <figcaption>O&amp;M Dashboard.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 8 DRAWINGS ============ -->
+<section class="part">
+  <span class="pill">Part 8 · Engineering</span>
+  <h2>Drawings</h2>
+  <p><span class="ui">Engineering → Submission Drawing</span> and <span class="ui">Installation Drawing</span> keep a daily count of drawings completed.</p>
+  <ol class="steps">
+    <li>In <strong>Log drawings done</strong>, pick the date and enter how many <strong>Residential</strong> and <strong>C&amp;I</strong> drawings were done.</li>
+    <li>Enter the <strong>PIC</strong> (who did them) and an optional note, then click <span class="ui">Add</span>.</li>
+  </ol>
+  <p>The page then shows totals for today, this week, this month and this year, a daily chart for the month, a table by date and a breakdown <strong>by PIC</strong>. Use <span class="ui">Download CSV (month)</span> or <span class="ui">CSV (whole year)</span> to export.</p>
+  <figure class="short">
+    <img src="img/drawing.png" alt="Submission drawing">
+    <figcaption>Submission Drawing after logging 3 residential and 1 C&amp;I drawing.</figcaption>
+  </figure>
+  <p>The <span class="ui">Engineering → Dashboard</span> combines drawings, load profile jobs, O&amp;M manuals and T&amp;C jobs, with a <strong>Drawing summary</strong> you can export by day, week, month or year.</p>
+</section>
+
+<!-- ============ 9 LOAD PROFILE ============ -->
+<section class="part">
+  <span class="pill">Part 9 · Engineering</span>
+  <h2>Load profile</h2>
+  <p><span class="ui">Engineering → Load Profile</span> tracks requests to install a load-logging device at a client's site, and which device is where.</p>
+  <h3><span class="n">9.1</span>New request</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">+ New request</span>.</li>
+    <li>Enter the client name, agent, phase, address and an optional note, then <span class="ui">Save</span>.</li>
+  </ol>
+  <figure class="half">
+    <img src="img/loadprofile-form.png" alt="New load profile request">
+    <figcaption>New load profile request.</figcaption>
+  </figure>
+  <h3><span class="n">9.2</span>Arrange the device</h3>
+  <ol class="steps">
+    <li>Switch to the <span class="ui">Calendar</span> view. New requests are listed under <strong>To arrange</strong>.</li>
+    <li>Pick the request, choose the <strong>device</strong>, the <strong>install date</strong>, the <strong>dismantle date</strong> and the PIC. A device already booked on those dates is marked <em>(booked)</em> in the list.</li>
+    <li><span class="ui">Save arrangement</span>. The job moves to <strong>Scheduled</strong>.</li>
+  </ol>
+  <p><strong>Status follows the dates automatically</strong>: <em>Open</em> before the install date, <em>In progress</em> from the install date, <em>Completed</em> after the dismantle date. <strong>Devices in use today</strong> shows how many of the devices are out on site. To record a job that is already finished, enter its device, PIC and the past dates.</p>
+  <figure class="short">
+    <img src="img/loadprofile.png" alt="Load profile list">
+    <figcaption>Load Profile request list.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 10 MANUAL ============ -->
+<section class="part">
+  <span class="pill">Part 10 · Engineering</span>
+  <h2>O&amp;M manuals</h2>
+  <p><span class="ui">Engineering → O&amp;M Manual</span> writes a complete Operation and Maintenance Manual for the client from the system details — introduction, how the system works (with a diagram), the scheme, safety, operation, maintenance and warranty. Each manual gets a reference such as <code>OM-261127-1404</code>.</p>
+  <ol class="steps">
+    <li><strong>Project</strong>: client, address, <strong>system type</strong> (On-Grid, Off-Grid, SELCO, Hybrid + BESS), <strong>scheme</strong> (ATAP, NEM, SELCO), commissioning date, prepared by. The text of the manual changes to suit the system type and scheme.</li>
+    <li><strong>System</strong>: size, phase, mounting, panel and inverter brand / model, quantities, monitoring app.</li>
+    <li><strong>Warranty</strong> years, plus warranty documents.</li>
+    <li><strong>Maintenance</strong>: cleaning frequency.</li>
+    <li>Attach drawings, the scheme certificate and system photos (PDF or picture). Drawings are placed after the Maintenance section; warranty documents go in the Warranty section.</li>
+    <li><strong>Company</strong> name, phone and email for the contact page.</li>
+    <li><span class="ui">Submit manual</span>, then <span class="ui">Print / Save as PDF</span>. <span class="ui">New manual</span> starts another.</li>
+  </ol>
+  <div class="note"><span class="label">Tip</span><p>Any box left empty appears as a dash (—) in the manual, so check the preview for dashes before you print.</p></div>
+  <figure>
+    <img src="img/manual.png" alt="O&amp;M manual">
+    <figcaption>O&amp;M Manual: details on the left, manual preview on the right. Saved manuals are listed at the bottom of the page.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 11 T&C ============ -->
+<section class="part">
+  <span class="pill">Part 11 · Engineering</span>
+  <h2>Testing &amp; commissioning (T&amp;C)</h2>
+  <p><span class="ui">Engineering → T&amp;C</span> records testing and commissioning jobs and produces a <strong>Testing &amp; Commissioning Report</strong>.</p>
+  <ol class="steps">
+    <li>Click <span class="ui">+ New T&amp;C job</span>.</li>
+    <li><strong>Job</strong>: client, address, date of test, PIC (tested by), status (Open / In progress / Completed).</li>
+    <li><strong>System</strong>: customer type (Residential / C&amp;I), phase, system size, panel model, module Voc and Isc from the datasheet.</li>
+    <li><strong>Test settings</strong>: insulation test voltage, tolerance, irradiance and test instrument.</li>
+    <li>Enter the measured string values. The app works out the expected Voc / Isc and <strong>marks any string outside the tolerance</strong> for checking.</li>
+    <li><span class="ui">Submit report</span> (or <span class="ui">Save draft</span>), then <span class="ui">Print / Save as PDF</span>. <span class="ui">Close</span> returns to the job list.</li>
+  </ol>
+  <figure>
+    <img src="img/tc.png" alt="T&amp;C report">
+    <figcaption>T&amp;C details and report preview.</figcaption>
+  </figure>
+  <p>The job list can be filtered by status and searched by client, address or PIC.</p>
+</section>
+
+<!-- ============ 12 MAIN DASHBOARD ============ -->
+<section class="part">
+  <span class="pill">Part 12</span>
+  <h2>Main dashboard and summaries</h2>
+  <p>The <span class="ui">Dashboard</span> in the sidebar is the management view across both areas. Each card shows the count for one tab — click a card to go there.</p>
+  <h3><span class="n">12.1</span>Export summary</h3>
+  <ol class="steps">
+    <li>Choose the period: <em>Daily, Weekly, Monthly</em> or <em>Yearly</em>, and the date inside it.</li>
+    <li>The table shows every tab's count with Open / On monitoring / Completed.</li>
+    <li><span class="ui">Download CSV</span> for Excel, or <span class="ui">Print / Save as PDF</span>.</li>
+  </ol>
+  <p><span class="ui">Export all summary (PDF)</span> (top right) builds one printable summary covering all tabs.</p>
+  <h3><span class="n">12.2</span>PIC work done</h3>
+  <p>Shows the work recorded against each person in charge — drawings, load profile jobs, site visits, rectification reports and O&amp;M manuals. Choose the period and a PIC (or <em>All PICs</em>), then export as CSV or PDF. This only works if the PIC boxes are filled in consistently, so always use the same spelling of each name.</p>
+</section>
+
+<!-- ============ 13 GOOD TO KNOW ============ -->
+<section class="part">
+  <span class="pill">Part 13</span>
+  <h2>Good to know</h2>
+  <h3><span class="n">13.1</span>Where your data is kept</h3>
+  <table>
+    <tr><th style="width:30%">This PC is…</th><th>Your records are…</th></tr>
+    <tr><td><strong>Connected</strong><br><em>“Shared with your team”</em></td><td>Saved in NUrul_DB. Everyone connected sees and can edit them, and they are there on any PC you connect. Pictures are stored in NUrul_DB too.</td></tr>
+    <tr><td><strong>Not connected</strong><br><em>“Saved on this device only”</em></td><td>Saved inside the app on this computer only. Updating the app keeps them; uninstalling with app data removed, resetting Windows or a failed disk loses them.</td></tr>
+  </table>
+  <ul class="b">
+    <li>A connected PC needs the internet to load and save records. If NUrul_DB cannot be reached when the app opens, it falls back to <em>“Saved on this device only”</em> — check the label before entering work, and reload once you are back online.</li>
+    <li>Whichever mode you use, save finished reports with <span class="ui">Print / Save as PDF</span> and export summaries with <span class="ui">Download CSV</span> for your records.</li>
+  </ul>
+  <h3><span class="n">13.2</span>Features that need Claude</h3>
+  <p>The dashboard was first built to run inside Claude. Two features depend on that and do not work in the desktop app:</p>
+  <table>
+    <tr><th style="width:34%">Feature</th><th>In the desktop app</th></tr>
+    <tr><td>Saving Report → <span class="ui">Auto-fill</span> from bill</td><td>Key the figures in by hand.</td></tr>
+    <tr><td>Site Issue → <span class="ui">Import issues</span> (Read with Claude)</td><td>Log each issue with <span class="ui">+ Log issue</span>.</td></tr>
+  </table>
+  <h3><span class="n">13.3</span>Coming soon</h3>
+  <p><strong>Analysis Report</strong> (system performance analysis) is shown as <em>Soon</em> and will arrive in a future update.</p>
+  <h3><span class="n">13.4</span>Quick answers</h3>
+  <table>
+    <tr><th style="width:38%">Question</th><th>Answer</th></tr>
+    <tr><td>My report still says <em>DRAFT</em>.</td><td>Click <span class="ui">Submit report</span>, then print again.</td></tr>
+    <tr><td>Where is my unfinished report?</td><td>O&amp;M → Dashboard → <strong>Drafts (not submitted)</strong> (saving and rectification), or the saved list on the Manual / T&amp;C page.</td></tr>
+    <tr><td>How do I save a PDF?</td><td><span class="ui">Print / Save as PDF</span> → printer <strong>Microsoft Print to PDF</strong> → <span class="ui">Print</span> → choose the folder.</td></tr>
+    <tr><td>The screen looks too big or small.</td><td><code>Ctrl + =</code> / <code>Ctrl + −</code>, or <code>Ctrl + 0</code> to reset.</td></tr>
+    <tr><td>A ticket is marked urgent by mistake.</td><td>Urgency comes from the issue type and the two tick boxes — correct the issue details; see the table in section 3.2.</td></tr>
+    <tr><td>Colleagues can't see my records.</td><td>Check the label under the page title. <em>“Saved on this device only”</em> means the app could not reach NUrul_DB when it opened — check your internet connection, then use <span class="ui">View → Reload</span>.</td></tr>
+    <tr><td>Which version do I have?</td><td><span class="ui">Help</span> menu.</td></tr>
+  </table>
+</section>
+
+</body>
+</html>
